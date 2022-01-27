@@ -1,0 +1,187 @@
+name: ci
+
+env:
+  MAVEN_OPTS: "-Xmx2G -XX:+ExitOnOutOfMemoryError -Dmaven.wagon.httpconnectionManager.ttlSeconds=25 -Dmaven.wagon.http.retryHandler.count=3"
+
+on:
+  workflow_call:
+    inputs:
+      maven_args:
+        description: The arguments to pass to all Maven commands when building the code
+        required: false
+        default: ''
+        type: string
+      maven_version:
+        description: The Maven version used for builds
+        required: false
+        default: '3.8.4'
+        type: string
+      os-matrix:
+        description: 'os matrix as json array'
+        required: false
+        default: '[ "ubuntu-latest" ]'
+        type: string
+      jdk-matrix:
+        description: 'jdk matrix as json array'
+        required: false
+        default: '[ "11", "16" ]'
+        type: string
+      jdk-distribution-matrix:
+        description: "jdk distribution matrix"
+        required: false
+        default: '[ "temurin" ]'
+        type: string
+      matrix-exclude:
+        description: 'exclude for matrix as json'
+        required: false
+        default: '[]'
+        type: string
+      max-parallel:
+        description: 'max parallel jobs'
+        required: false
+        default: 100
+        type: number
+      timeout-minutes:
+        description: 'timeout-minutes used by the builds (defaults to 360)'
+        required: false
+        default: 360
+        type: number
+      ff-os:
+        description: The os used during fail-fast-build job
+        required: false
+        default: 'ubuntu-latest'
+        type: string
+      ff-jdk:
+        description: The jdk version used during fail-fast-build job
+        required: false
+        default: '11'
+        type: string
+      ff-jdk-distribution:
+        description: The jdk distribution used during fail-fast-build job
+        required: false
+        default: 'temurin'
+        type: string
+      ff-goal:
+        description: The Maven goal(s) used by fail-fast-build job
+        required: false
+        default: 'test verify'
+        type: string
+      ff-profile:
+        description: The Maven profile used by fail-fast-build job
+        required: false
+        default: 'travis'
+        type: string
+      ff-timeout-minutes:
+        description: 'timeout-minutes used by fail-fast-build jobs (defaults to 360)'
+        required: false
+        default: 360
+        type: number
+      test-goal:
+        description: The Maven goal(s) used by test jobs
+        required: false
+        default: 'test verify'
+        type: string
+      test-profile-matrix:
+        description: The Maven profile used by test jobs
+        required: false
+        default: '[ "travis", "mysql", "postgresql" ]'
+        type: string
+      test-fail-fast:
+        description: Determinate if verification matrix should fail fast
+        required: false
+        default: true
+        type: boolean
+      failure-upload-path:
+        description: A file, directory or wildcard pattern that describes what to upload on failure
+        required: false
+        type: string
+
+jobs:
+  # verify build on one node - before matrix will start
+  fail-fast-build:
+    name: jdk-${{ inputs.ff-jdk }} ${{ inputs.ff-profile }}
+    runs-on: ${{ inputs.ff-os }}
+    timeout-minutes: ${{ inputs.ff-timeout-minutes }}
+    # execute on any push or pull request from forked repo
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || ( github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork )
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2.4.0
+        with:
+          persist-credentials: false
+      - name: Set up JDK
+        uses: actions/setup-java@v2.5.0
+        with:
+          java-version: ${{ inputs.ff-jdk }}
+          distribution: ${{ inputs.ff-jdk-distribution }}
+          cache: 'maven'
+      - name: Configure Sonatype mirror
+        uses: s4u/maven-settings-action@v2.4.1
+        # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
+        with:
+          mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "*", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
+          sonatypeSnapshots: true
+      - name: Set up Maven
+        run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
+      - name: Run tests
+        run: ./mvnw --errors --batch-mode --show-version -P${{ inputs.ff-profile }} ${{ inputs.maven_args }} ${{ inputs.ff-goal }}
+      - name: Upload artifact on failure
+        uses: actions/upload-artifact@v2.3.1
+        if: failure() && inputs.failure-upload-path != ''
+        with:
+          name: failure-${{ inputs.ff-os }}-${{ inputs.ff-jdk }}-${{ inputs.ff-jdk-distribution }}
+          path: ${{ inputs.failure-upload-path }}
+  test:
+    needs: fail-fast-build
+    name: jdk-${{ matrix.jdk }} ${{ matrix.profile }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: ${{ inputs.test-fail-fast }}
+      matrix:
+        os: ${{ fromJSON( inputs.os-matrix ) }}
+        jdk: ${{ fromJSON( inputs.jdk-matrix ) }}
+        distribution: ${{ fromJSON( inputs.jdk-distribution-matrix ) }}
+        exclude: ${{ fromJSON( inputs.matrix-exclude ) }}
+        profile: ${{ fromJSON( inputs.test-profile-matrix ) }}
+      max-parallel: ${{ inputs.max-parallel }}
+    steps:
+      - name: Should run
+        id: should-run
+        if: >
+          matrix.os != inputs.ff-os ||
+          matrix.jdk != inputs.ff-jdk ||
+          matrix.distribution != inputs.ff-jdk-distribution ||
+          matrix.profile != inputs.ff-profile ||
+          inputs.test-goal != inputs.ff-goal
+        run: echo ok
+      - name: Checkout
+        if: steps.should-run.conclusion == 'success'
+        uses: actions/checkout@v2.4.0
+        with:
+          persist-credentials: false
+      - name: Set up JDK
+        if: steps.should-run.conclusion == 'success'
+        uses: actions/setup-java@v2.5.0
+        with:
+          java-version: ${{ matrix.jdk }}
+          distribution: ${{ matrix.distribution }}
+          cache: 'maven'
+      - name: Configure Sonatype mirror
+        uses: s4u/maven-settings-action@v2.4.1
+        # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
+        with:
+          mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "*", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
+          sonatypeSnapshots: true
+      - name: Set up Maven
+        if: steps.should-run.conclusion == 'success'
+        run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
+      - name: Run tests
+        if: steps.should-run.conclusion == 'success'
+        run: ./mvnw --errors --batch-mode --show-version -P${{ matrix.profile }} ${{ inputs.maven_args }} ${{ inputs.test-goal }}
+      - name: Upload artifact on failure
+        uses: actions/upload-artifact@v2.3.1
+        if: steps.should-run.conclusion == 'success' && failure() && inputs.failure-upload-path != ''
+        with:
+          name: failure-${{ matrix.os }}-${{ matrix.jdk }}-${{ matrix.distribution }}
+          path: ${{ inputs.failure-upload-path }}
