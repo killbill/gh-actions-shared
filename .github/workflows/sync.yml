@@ -1,0 +1,59 @@
+name: sync
+
+on:
+  workflow_call:
+    secrets:
+      # Required to trigger further actions (e.g. CI)
+      CREATE_PULL_REQUEST_SSH_KEY:
+        required: false
+    inputs:
+      os:
+        description: The OS used
+        required: false
+        default: 'ubuntu-latest'
+        type: string
+      timeout-minutes:
+        description: 'timeout-minutes used by the builds (defaults to 360)'
+        required: false
+        default: 360
+        type: number
+      failure-upload-path:
+        description: A file, directory or wildcard pattern that describes what to upload on failure
+        required: false
+        type: string
+      branch:
+        description: The branch to sync with master
+        required: false
+        default: 'work-for-release-0.23.x'
+        type: string
+
+jobs:
+  sync:
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+          ref: ${{ inputs.branch }}
+          ssh-key: ${{ secrets.CREATE_PULL_REQUEST_SSH_KEY }}
+      - name: Setup git user
+        run: |
+          git config --global user.email "contact@killbill.io"
+          git config --global user.name "Kill Bill core team"
+      - name: Merge master branch
+        run: git merge origin/master
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3.12.0
+        with:
+          branch: ${{ inputs.branch }}-promotion
+          title: Sync master into ${{ inputs.branch }}
+          body: Merge latest master into ${{ inputs.branch }}
+      - name: Upload artifact on failure
+        uses: actions/upload-artifact@v2.3.1
+        if: failure() && inputs.failure-upload-path != ''
+        with:
+          name: failure-${{ inputs.os }}-${{ inputs.jdk }}-${{ inputs.jdk-distribution }}
+          path: ${{ inputs.failure-upload-path }}
