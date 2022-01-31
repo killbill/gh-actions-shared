@@ -119,7 +119,7 @@ jobs:
         uses: s4u/maven-settings-action@v2.4.1
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
         with:
-          mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "*", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
+          mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
           sonatypeSnapshots: true
       - name: Set up Maven
         run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
@@ -172,7 +172,7 @@ jobs:
         uses: s4u/maven-settings-action@v2.4.1
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
         with:
-          mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "*", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
+          mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
           sonatypeSnapshots: true
       - name: Set up Maven
         if: steps.should-run.conclusion == 'success'
