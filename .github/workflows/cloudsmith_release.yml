@@ -1,0 +1,134 @@
+name: cloudsmith_release
+
+env:
+  MAVEN_OPTS: "-Xmx2G -XX:+ExitOnOutOfMemoryError -Dmaven.wagon.httpconnectionManager.ttlSeconds=25 -Dmaven.wagon.http.retryHandler.count=3"
+
+on:
+  workflow_call:
+    secrets:
+      CLOUDSMITH_REPO:
+        required: true
+      CLOUDSMITH_USER:
+        required: true
+      CLOUDSMITH_API_KEY:
+        required: true
+    inputs:
+      maven_args:
+        description: The arguments to pass to all Maven commands when building the code
+        required: false
+        default: '-DskipTests=true -Dgpg.skip=true -Dcheck.skip-rat=true -Dcheck.skip-spotbugs=true'
+        type: string
+      goal:
+        description: The Maven goal(s) used when building the code
+        required: false
+        default: 'verify'
+        type: string
+      maven_version:
+        description: The Maven version used for builds
+        required: false
+        default: '3.8.4'
+        type: string
+      os:
+        description: The OS used
+        required: false
+        default: 'ubuntu-latest'
+        type: string
+      jdk:
+        description: The JDK used
+        required: false
+        default: '11'
+        type: string
+      jdk-distribution:
+        description: The JDK distribution used
+        required: false
+        default: 'temurin'
+        type: string
+      timeout-minutes:
+        description: 'timeout-minutes used by the builds (defaults to 360)'
+        required: false
+        default: 360
+        type: number
+      deploy_args:
+        description: The arguments to pass to all Maven commands when deploying the code
+        required: false
+        default: '-Dpackaging=jar -DgeneratePom=true'
+        type: string
+      deploy_goal:
+        description: The Maven deploy goal(s) used
+        required: false
+        default: 'deploy:deploy-file'
+        type: string
+      failure-upload-path:
+        description: A file, directory or wildcard pattern that describes what to upload on failure
+        required: false
+        type: string
+      group_id:
+        description: The group id of the released artifact
+        required: true
+        type: string
+      artifact_id:
+        description: The artifact id of the released artifact
+        required: true
+        type: string
+
+jobs:
+  cloudsmith_release:
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2.4.0
+        with:
+          persist-credentials: false
+      - name: Set up JDK
+        uses: actions/setup-java@v2.5.0
+        with:
+          java-version: ${{ inputs.jdk }}
+          distribution: ${{ inputs.jdk-distribution }}
+          cache: 'maven'
+      - name: Configure Sonatype mirror
+        uses: s4u/maven-settings-action@v2.4.1
+        # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
+        with:
+          mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
+          sonatypeSnapshots: true
+          servers: |
+            [{
+                "id": "${CLOUDSMITH_REPO}",
+                "username": "${CLOUDSMITH_USER}",
+                "password": "${CLOUDSMITH_API_KEY}"
+            }]
+      - name: Set up Maven
+        run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
+      - name: Set new version
+        run: |
+          current_version_with_snapshot=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
+          current_version_without_snapshot=${current_version_with_snapshot%SNAPSHOT*}
+          new_version="${current_version_without_snapshot}$(git rev-parse --short HEAD)"
+          ./mvnw versions:set -DnewVersion=${new_version}
+          echo "::notice ::Version is ${new_version}"
+      - name: Build artifacts
+        run: ./mvnw --errors --batch-mode --show-version ${{ inputs.maven_args }} ${{ inputs.goal }}
+      - name: Deploy artifacts
+        env:
+          CLOUDSMITH_USER: ${{ secrets.CLOUDSMITH_USER }}
+          CLOUDSMITH_REPO: ${{ secrets.CLOUDSMITH_REPO }}
+          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+        run: |
+          VERSION=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
+          FILE=${{ inputs.artifact_id }}-$VERSION.jar
+          # Make sure the current pom.xml file isn't uploaded
+          cp -r ./target/$FILE .mvn mvnw /var/tmp/
+          cd /var/tmp
+          ./mvnw --errors --batch-mode --show-version ${{ inputs.maven_deploy_args }} ${{ inputs.deploy_goal }} -Dfile=$FILE \
+                                                                                                                -DrepositoryId=$CLOUDSMITH_REPO \
+                                                                                                                -Durl=https://maven.cloudsmith.io/killbill/$CLOUDSMITH_REPO \
+                                                                                                                -DgroupId=${{ inputs.group_id }} \
+                                                                                                                -DartifactId=${{ inputs.artifact_id }} \
+                                                                                                                -Dversion=$VERSION
+      - name: Upload artifact on failure
+        uses: actions/upload-artifact@v2.3.1
+        if: failure() && inputs.failure-upload-path != ''
+        with:
+          name: failure-${{ inputs.os }}-${{ inputs.jdk }}-${{ inputs.jdk-distribution }}
+          path: ${{ inputs.failure-upload-path }}
