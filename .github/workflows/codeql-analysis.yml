@@ -9,7 +9,7 @@ on:
       maven_args:
         description: The arguments to pass to all Maven commands when building the code
         required: false
-        default: '-DskipTests=true'
+        default: '-DskipTests=true -Dcheck.skip-dependency=true -Dcheck.skip-dependency-scope=true -Dcheck.skip-dependency-versions=true -Dcheck.skip-duplicate-finder=true -Dcheck.skip-enforcer=true -Dcheck.skip-rat=true -Dcheck.skip-spotbugs=true'
         type: string
       maven_version:
         description: The Maven version used for builds
