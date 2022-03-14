@@ -7,9 +7,14 @@ on:
   workflow_call:
     inputs:
       maven_args:
-        description: The arguments to pass to all Maven commands when building the code
+        description: The arguments to pass to all Maven commands when running tests
         required: false
-        default: ''
+        default: '-Dcheck.skip-dependency=true -Dcheck.skip-dependency-scope=true -Dcheck.skip-dependency-versions=true -Dcheck.skip-duplicate-finder=true -Dcheck.skip-enforcer=true -Dcheck.skip-rat=true -Dcheck.skip-spotbugs=true'
+        type: string
+      verify_maven_args:
+        description: The arguments to pass to all Maven commands when verifying build
+        required: false
+        default: '-DskipTests=true'
         type: string
       maven_version:
         description: The Maven version used for builds
@@ -91,6 +96,11 @@ on:
         required: false
         default: true
         type: boolean
+      verify-goal:
+        description: The Maven goal(s) used by verify job
+        required: false
+        default: 'verify'
+        type: string
       failure-upload-path:
         description: A file, directory or wildcard pattern that describes what to upload on failure
         required: false
@@ -185,4 +195,36 @@ jobs:
         if: steps.should-run.conclusion == 'success' && failure() && inputs.failure-upload-path != ''
         with:
           name: failure-${{ matrix.os }}-${{ matrix.jdk }}-${{ matrix.distribution }}
+          path: ${{ inputs.failure-upload-path }}
+  verify:
+    needs: fail-fast-build
+    name: verify
+    runs-on: ${{ inputs.ff-os }}
+    timeout-minutes: ${{ inputs.ff-timeout-minutes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2.4.0
+        with:
+          persist-credentials: false
+      - name: Set up JDK
+        uses: actions/setup-java@v2.5.0
+        with:
+          java-version: ${{ inputs.ff-jdk }}
+          distribution: ${{ inputs.ff-jdk-distribution }}
+          cache: 'maven'
+      - name: Configure Sonatype mirror
+        uses: s4u/maven-settings-action@v2.4.1
+        # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
+        with:
+          mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
+          sonatypeSnapshots: true
+      - name: Set up Maven
+        run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
+      - name: Verify
+        run: ./mvnw --errors --batch-mode --show-version -P${{ inputs.ff-profile }} ${{ inputs.verify_maven_args }} ${{ inputs.verify-goal }}
+      - name: Upload artifact on failure
+        uses: actions/upload-artifact@v2.3.1
+        if: failure() && inputs.failure-upload-path != ''
+        with:
+          name: failure-verify-${{ inputs.ff-os }}-${{ inputs.ff-jdk }}-${{ inputs.ff-jdk-distribution }}
           path: ${{ inputs.failure-upload-path }}
