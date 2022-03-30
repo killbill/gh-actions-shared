@@ -124,7 +124,7 @@ jobs:
         with:
           java-version: ${{ inputs.ff-jdk }}
           distribution: ${{ inputs.ff-jdk-distribution }}
-          cache: 'maven'
+          #cache: 'maven'
       - name: Configure Sonatype mirror
         uses: s4u/maven-settings-action@v2.4.1
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
@@ -176,7 +176,7 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: ${{ matrix.distribution }}
-          cache: 'maven'
+          #cache: 'maven'
       - name: Configure Sonatype mirror
         if: steps.should-run.conclusion == 'success'
         uses: s4u/maven-settings-action@v2.4.1
@@ -211,7 +211,7 @@ jobs:
         with:
           java-version: ${{ inputs.ff-jdk }}
           distribution: ${{ inputs.ff-jdk-distribution }}
-          cache: 'maven'
+          #cache: 'maven'
       - name: Configure Sonatype mirror
         uses: s4u/maven-settings-action@v2.4.1
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
