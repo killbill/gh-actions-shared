@@ -68,7 +68,8 @@ on:
         type: string
       artifact_id:
         description: The artifact id of the released artifact
-        required: true
+        required: false
+        default: '*'
         type: string
 
 jobs:
@@ -115,17 +116,25 @@ jobs:
           CLOUDSMITH_REPO: ${{ secrets.CLOUDSMITH_REPO }}
           CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
         run: |
+          cp -r .mvn mvnw /var/tmp/
           VERSION=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
-          FILE=${{ inputs.artifact_id }}-$VERSION.jar
-          # Make sure the current pom.xml file isn't uploaded
-          cp -r ./target/$FILE .mvn mvnw /var/tmp/
-          cd /var/tmp
-          ./mvnw --errors --batch-mode --show-version ${{ inputs.maven_deploy_args }} ${{ inputs.deploy_goal }} -Dfile=$FILE \
-                                                                                                                -DrepositoryId=$CLOUDSMITH_REPO \
-                                                                                                                -Durl=https://maven.cloudsmith.io/killbill/$CLOUDSMITH_REPO \
-                                                                                                                -DgroupId=${{ inputs.group_id }} \
-                                                                                                                -DartifactId=${{ inputs.artifact_id }} \
-                                                                                                                -Dversion=$VERSION
+          FILES=${{ inputs.artifact_id }}-$VERSION.jar
+          for f in `find . -type f -name "$FILES"`; do
+            # Make sure the current pom.xml file isn't uploaded
+            cp $f /var/tmp/
+            filename=$(basename $f)
+            artifactId=${filename%-$VERSION*}
+
+            cd /var/tmp
+            echo "Deploying $filename"
+            ./mvnw --errors --batch-mode --show-version ${{ inputs.maven_deploy_args }} ${{ inputs.deploy_goal }} -Dfile=$filename \
+                                                                                                                  -DrepositoryId=$CLOUDSMITH_REPO \
+                                                                                                                  -Durl=https://maven.cloudsmith.io/killbill/$CLOUDSMITH_REPO \
+                                                                                                                  -DgroupId=${{ inputs.group_id }} \
+                                                                                                                  -DartifactId=$artifactId \
+                                                                                                                  -Dversion=$VERSION
+            cd -
+          done
       - name: Upload artifact on failure
         uses: actions/upload-artifact@v2.3.1
         if: failure() && inputs.failure-upload-path != ''
