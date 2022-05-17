@@ -9,7 +9,7 @@ on:
       maven_args:
         description: The arguments to pass to all Maven commands when running tests
         required: false
-        default: '-Dcheck.skip-dependency=true -Dcheck.skip-dependency-scope=true -Dcheck.skip-dependency-versions=true -Dcheck.skip-duplicate-finder=true -Dcheck.skip-enforcer=true -Dcheck.skip-rat=true -Dcheck.skip-spotbugs=true'
+        default: '-Dmaven.test.redirectTestOutputToFile=true -Dcheck.skip-dependency=true -Dcheck.skip-dependency-scope=true -Dcheck.skip-dependency-versions=true -Dcheck.skip-duplicate-finder=true -Dcheck.skip-enforcer=true -Dcheck.skip-rat=true -Dcheck.skip-spotbugs=true'
         type: string
       verify_maven_args:
         description: The arguments to pass to all Maven commands when verifying build
@@ -104,7 +104,13 @@ on:
       failure-upload-path:
         description: A file, directory or wildcard pattern that describes what to upload on failure
         required: false
+        default: '**/surefire-reports/*'
         type: string
+      failure-upload-retention-days:
+        description: Number of days to keep the files
+        required: false
+        default: 7
+        type: number
 
 jobs:
   # verify build on one node - before matrix will start
@@ -141,6 +147,7 @@ jobs:
         with:
           name: failure-${{ inputs.ff-os }}-${{ inputs.ff-jdk }}-${{ inputs.ff-jdk-distribution }}
           path: ${{ inputs.failure-upload-path }}
+          retention-days: ${{ inputs.failure-upload-retention-days }}
   test:
     needs: fail-fast-build
     name: jdk-${{ matrix.jdk }} ${{ matrix.profile }}
@@ -196,6 +203,7 @@ jobs:
         with:
           name: failure-${{ matrix.os }}-${{ matrix.jdk }}-${{ matrix.distribution }}
           path: ${{ inputs.failure-upload-path }}
+          retention-days: ${{ inputs.failure-upload-retention-days }}
   verify:
     needs: fail-fast-build
     name: verify
@@ -228,3 +236,4 @@ jobs:
         with:
           name: failure-verify-${{ inputs.ff-os }}-${{ inputs.ff-jdk }}-${{ inputs.ff-jdk-distribution }}
           path: ${{ inputs.failure-upload-path }}
+          retention-days: ${{ inputs.failure-upload-retention-days }}
