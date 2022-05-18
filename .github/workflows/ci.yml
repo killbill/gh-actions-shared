@@ -5,6 +5,9 @@ env:
 
 on:
   workflow_call:
+    secrets:
+      extra-env:
+        required: false
     inputs:
       maven_args:
         description: The arguments to pass to all Maven commands when running tests
@@ -121,6 +124,10 @@ jobs:
     # execute on any push or pull request from forked repo
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || ( github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork )
     steps:
+      - name: Set environment variables
+        run: |
+          echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("::add-mask::\(.value|tostring)")|.[]'
+          echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
       - name: Checkout
         uses: actions/checkout@v2.4.0
         with:
@@ -172,6 +179,10 @@ jobs:
           matrix.profile != inputs.ff-profile ||
           inputs.test-goal != inputs.ff-goal
         run: echo ok
+      - name: Set environment variables
+        run: |
+          echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("::add-mask::\(.value|tostring)")|.[]'
+          echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
       - name: Checkout
         if: steps.should-run.conclusion == 'success'
         uses: actions/checkout@v2.4.0
@@ -210,6 +221,10 @@ jobs:
     runs-on: ${{ inputs.ff-os }}
     timeout-minutes: ${{ inputs.ff-timeout-minutes }}
     steps:
+      - name: Set environment variables
+        run: |
+          echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("::add-mask::\(.value|tostring)")|.[]'
+          echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
       - name: Checkout
         uses: actions/checkout@v2.4.0
         with:
