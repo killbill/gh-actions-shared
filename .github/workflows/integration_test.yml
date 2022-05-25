@@ -192,7 +192,6 @@ jobs:
                "http://${KB_ADDRESS}:${KB_PORT}/1.0/kb/tenants"
       - name: Verify plugin has started
         run: |
-          sudo snap install yq
           count=0
           until [[ "$(curl -s -uadmin:password http://${KB_ADDRESS}:${KB_PORT}/1.0/kb/nodesInfo | jq -r '.[].pluginsInfo[] | select(.pluginName == "${{ inputs.plugin_name }}-plugin").state')" == "RUNNING" ]]; do
             if [[ "$count" == "5" ]]; then
