@@ -1,0 +1,260 @@
+name: integration_test
+
+env:
+  MAVEN_OPTS: "-Xmx2G -XX:+ExitOnOutOfMemoryError -Dmaven.wagon.httpconnectionManager.ttlSeconds=25 -Dmaven.wagon.http.retryHandler.count=3"
+  COMPOSE_DOCKER_CLI_BUILD: 1
+  DOCKER_BUILDKIT: 1
+  KB_ADDRESS: 127.0.0.1
+  KB_PORT: 8080
+
+on:
+  workflow_call:
+    secrets:
+      extra-env:
+        required: false
+    inputs:
+      integration_tests_goal:
+        description: integration-tests goal
+        required: true
+        type: string
+      plugin_name:
+        description: The plugin name
+        required: true
+        type: string
+      ddl_file:
+        description: The DDL file for the plugin
+        required: false
+        default: ''
+        type: string
+      integration_tests_ref:
+        description: The ref of killbill-integration-tests to checkout
+        required: false
+        default: 'refs/heads/work-for-release-0.23.x'
+        type: string
+      maven_args:
+        description: The arguments to pass to all Maven commands
+        required: false
+        default: '-Dmaven.test.redirectTestOutputToFile=true -Dcheck.skip-dependency=true -Dcheck.skip-dependency-scope=true -Dcheck.skip-dependency-versions=true -Dcheck.skip-duplicate-finder=true -Dcheck.skip-enforcer=true -Dcheck.skip-rat=true -Dcheck.skip-spotbugs=true -DskipTests=true'
+        type: string
+      maven_goal:
+        description: The Maven goal(s) used to build the plugin
+        required: false
+        default: 'clean package'
+        type: string
+      maven_version:
+        description: The Maven version used for builds
+        required: false
+        default: '3.8.4'
+        type: string
+      max-parallel:
+        description: 'max parallel jobs'
+        required: false
+        default: 100
+        type: number
+      timeout-minutes:
+        description: 'timeout-minutes used by the builds (defaults to 360)'
+        required: false
+        default: 360
+        type: number
+      fail-fast:
+        description: Determinate if matrix should fail fast
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  integration_test:
+    name: jdk-${{ matrix.java-version }} ${{ matrix.database-adapter }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: ${{ inputs.fail-fast }}
+      matrix:
+        include:
+          - ruby-version: '2.4.2'
+            database-adapter: 'mysql2'
+            database-user: 'root'
+            database-password: 'root'
+            database-port: '3306'
+            docker-compose-file: 'docker-compose.ci.mysql.yml'
+            java-version: '11'
+            java-distribution: 'temurin'
+          - ruby-version: '2.4.2'
+            database-adapter: 'postgresql'
+            database-user: 'postgres'
+            database-password: 'postgres'
+            database-port: '5432'
+            docker-compose-file: 'docker-compose.ci.postgresql.yml'
+            java-version: '11'
+            java-distribution: 'temurin'
+      max-parallel: ${{ inputs.max-parallel }}
+    steps:
+      - name: Set environment variables
+        run: |
+          echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("::add-mask::\(.value|tostring)")|.[]'
+          echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
+      - name: Checkout
+        uses: actions/checkout@v2.4.0
+        with:
+          persist-credentials: false
+      - name: Set up JDK
+        uses: actions/setup-java@v2.5.0
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: ${{ matrix.java-distribution }}
+          #cache: 'maven'
+      - name: Configure Sonatype mirror
+        uses: s4u/maven-settings-action@v2.4.1
+        # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
+        with:
+          mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
+          sonatypeSnapshots: true
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+      - name: Install kpm
+        run: |
+          gem install kpm
+      - name: Set up Maven
+        run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
+      - name: Build plugin
+        run: |
+          ./mvnw --errors --batch-mode --show-version ${{ inputs.maven_args }} ${{ inputs.maven_goal }}
+      - name: Install plugin
+        run: |
+          kpm install_java_plugin ${{ inputs.plugin_name }} --from-source-file target/${{ inputs.plugin_name }}-plugin-*-SNAPSHOT.jar --destination /var/tmp/bundles
+      - name: Start stack
+        run: |
+          mkdir -p /var/tmp/tomcat_logs
+          chmod ugo+rwx /var/tmp/tomcat_logs
+          cd docker
+          docker-compose -p it -f ${{ matrix.docker-compose-file }} up --no-start
+          docker start it_db_1
+      - name: Wait for MySQL
+        if: ${{ matrix.docker-compose-file == 'docker-compose.ci.mysql.yml' }}
+        run: |
+          set +e
+          count=0
+          until mysqladmin ping -h 127.0.0.1 -u root --password=root --silent; do
+            if [[ "$count" == "25" ]]; then
+              exit 1
+            fi
+            (( count++ ))
+            printf '.'
+            sleep 5
+          done
+          set -e
+      - name: Wait for PostgreSQL
+        if: ${{ matrix.docker-compose-file == 'docker-compose.ci.postgresql.yml' }}
+        run: |
+          set +e
+          count=0
+          until $(psql -h 127.0.0.1 -U postgres -p 5432 -l > /dev/null); do
+            if [[ "$count" == "25" ]]; then
+              exit 1
+            fi
+            (( count++ ))
+            printf '.'
+            sleep 5
+          done
+          set -e
+      - name: Install plugin specific MySQL DDL
+        if: matrix.docker-compose-file == 'docker-compose.ci.mysql.yml' && inputs.ddl_file != ''
+        run: |
+          cat ${{ inputs.ddl_file }} | mysql -h 127.0.0.1 -u root --password=root killbill
+      - name: Install plugin specific PostgreSQL DDL
+        if: matrix.docker-compose-file == 'docker-compose.ci.postgresql.yml' && inputs.ddl_file != ''
+        run: |
+          cat ${{ inputs.ddl_file }} | psql -h 127.0.0.1 -U postgres -p 5432 -d killbill
+      - name: Start Kill Bill
+        # Sometimes it gets stuck (if Kill Bill starts when the DB isn't ready?)
+        timeout-minutes: 4
+        run: |
+          # Start all remaining containers
+          cd docker
+          docker-compose -p it -f ${{ matrix.docker-compose-file }} up -d
+          count=0
+          until $(curl --connect-timeout 10 --max-time 30 --output /dev/null --silent --fail http://${KB_ADDRESS}:${KB_PORT}/1.0/healthcheck); do
+            if [[ "$count" == "180" ]]; then
+              exit 64
+            fi
+            count=$(( count + 1 ))
+            sleep 1
+          done
+          curl --connect-timeout 10 --max-time 30 -v \
+               -X POST \
+               -u admin:password \
+               -H 'Content-Type: application/json' \
+               -H 'X-Killbill-CreatedBy: GitHub' \
+               -d '{"apiKey": "bob", "apiSecret": "lazar"}' \
+               "http://${KB_ADDRESS}:${KB_PORT}/1.0/kb/tenants"
+      - name: Verify plugin has started
+        run: |
+          count=0
+          until [[ "$(curl -s -uadmin:password http://${KB_ADDRESS}:${KB_PORT}/1.0/kb/nodesInfo | jq -r '.[].pluginsInfo[] | select(.pluginName == "${{ inputs.plugin_name }}-plugin").state')" == "RUNNING" ]]; do
+            if [[ "$count" == "5" ]]; then
+              curl -uadmin:password http://${KB_ADDRESS}:${KB_PORT}/1.0/kb/nodesInfo | jq .
+              exit 64
+            fi
+            count=$(( count + 1 ))
+            sleep 1
+          done
+      - name: Checkout killbill-integration-tests
+        uses: actions/checkout@v2
+        with:
+          repository: killbill/killbill-integration-tests
+          ref: ${{ inputs.integration_tests_ref }}
+          path: killbill-integration-tests
+      - name: Run tests
+        env:
+          DB_ADAPTER: ${{ matrix.database-adapter }}
+          DB_USER: ${{ matrix.database-user }}
+          DB_PASSWORD: ${{ matrix.database-password }}
+          DB_PORT: ${{ matrix.database-port }}
+        run: |
+          cd killbill-integration-tests
+          bundle install --jobs=4 --retry=3
+          bundle exec rake ${{ inputs.integration_tests_goal }}
+      - name: Debugging after failure
+        if: failure()
+        run: |
+          echo "::group::killbill healthcheck"
+          curl --connect-timeout 10 --max-time 30 -v http://${KB_ADDRESS}:${KB_PORT}/1.0/healthcheck || true
+          echo "::endgroup::"
+          echo "::group::hostname"
+          hostname
+          echo "::endgroup::"
+          echo "::group::netstat -tulpn"
+          sudo netstat -tulpn
+          echo "::endgroup::"
+          echo "::group::docker network ls"
+          docker network ls
+          echo "::endgroup::"
+          echo "::group::docker ps -a"
+          docker ps -a
+          echo "::endgroup::"
+          echo "::group::killbill env"
+          docker exec it_killbill_1 env || true
+          echo "::endgroup::"
+          echo "::group::db env"
+          docker exec it_db_1 env || true
+          echo "::endgroup::"
+          echo "::group::killbill logs"
+          docker logs -t --details it_killbill_1 || true
+          # To avoid EACCES errors for the upload
+          docker stop it_killbill_1 || true
+          sudo chmod -R ugo+rwx /var/tmp/tomcat_logs
+          echo "::endgroup::"
+          echo "::group::db logs"
+          docker logs -t --details it_db_1 || true
+          docker stop it_db_1 || true
+          echo "::endgroup::"
+      - name: Upload logs on failure
+        uses: actions/upload-artifact@v2.3.1
+        if: failure()
+        with:
+          name: failure-tomcat_logs-${{ matrix.database-adapter }}
+          path: /var/tmp/tomcat_logs
+          retention-days: 3
