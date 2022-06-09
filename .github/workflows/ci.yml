@@ -129,7 +129,7 @@ jobs:
           echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("::add-mask::\(.value|tostring)")|.[]'
           echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
       - name: Checkout
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.0.2
         with:
           persist-credentials: false
       - name: Set up JDK
@@ -185,7 +185,7 @@ jobs:
           echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
       - name: Checkout
         if: steps.should-run.conclusion == 'success'
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.0.2
         with:
           persist-credentials: false
       - name: Set up JDK
@@ -226,7 +226,7 @@ jobs:
           echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("::add-mask::\(.value|tostring)")|.[]'
           echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
       - name: Checkout
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.0.2
         with:
           persist-credentials: false
       - name: Set up JDK
