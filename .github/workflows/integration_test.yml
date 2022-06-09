@@ -94,7 +94,7 @@ jobs:
           echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("::add-mask::\(.value|tostring)")|.[]'
           echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
       - name: Checkout
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.0.2
         with:
           persist-credentials: false
       - name: Set up JDK
@@ -202,7 +202,7 @@ jobs:
             sleep 1
           done
       - name: Checkout killbill-integration-tests
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3.0.2
         with:
           repository: killbill/killbill-integration-tests
           ref: ${{ inputs.integration_tests_ref }}
