@@ -70,11 +70,11 @@ jobs:
       - name: Set up Maven
         run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v1
+        uses: github/codeql-action/init@v2
         with:
           languages: java
       - name: Build code
         run: |
           ./mvnw --errors --batch-mode --show-version ${{ inputs.maven_args }} ${{ inputs.goal }}
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v1
+        uses: github/codeql-action/analyze@v2
