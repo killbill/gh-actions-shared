@@ -22,7 +22,7 @@ on:
       maven_version:
         description: The Maven version used for builds
         required: false
-        default: '3.8.4'
+        default: '3.8.6'
         type: string
       os-matrix:
         description: 'os matrix as json array'
