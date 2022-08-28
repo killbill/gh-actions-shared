@@ -54,6 +54,7 @@ on:
 jobs:
   snapshot:
     runs-on: ${{ inputs.os }}
+    if: ${{ github.actor != 'dependabot[bot]' }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - name: Checkout
