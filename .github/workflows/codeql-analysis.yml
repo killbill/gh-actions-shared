@@ -50,6 +50,8 @@ jobs:
   analyze:
     runs-on: ${{ inputs.os }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
+    permissions:
+      security-events: write
     steps:
       - name: Checkout
         uses: actions/checkout@v3.0.2
