@@ -29,7 +29,7 @@ on:
       integration_tests_ref:
         description: The ref of killbill-integration-tests to checkout
         required: false
-        default: 'refs/heads/work-for-release-0.23.x'
+        default: 'refs/heads/master'
         type: string
       maven_args:
         description: The arguments to pass to all Maven commands
