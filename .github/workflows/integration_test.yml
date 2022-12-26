@@ -71,7 +71,7 @@ jobs:
       fail-fast: ${{ inputs.fail-fast }}
       matrix:
         include:
-          - ruby-version: '2.5.0'
+          - ruby-version: '2.6.0'
             database-adapter: 'mysql2'
             database-user: 'root'
             database-password: 'root'
@@ -79,7 +79,7 @@ jobs:
             docker-compose-file: 'docker-compose.ci.mysql.yml'
             java-version: '11'
             java-distribution: 'temurin'
-          - ruby-version: '2.5.0'
+          - ruby-version: '2.6.0'
             database-adapter: 'postgresql'
             database-user: 'postgres'
             database-password: 'postgres'
