@@ -144,6 +144,8 @@ jobs:
         with:
           mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
           sonatypeSnapshots: true
+      - name: Configure Maven
+        uses: s4u/maven-settings-action@v2.2.0
       - name: Set up Maven
         run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
       - name: Run tests
