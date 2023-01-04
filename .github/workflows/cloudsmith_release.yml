@@ -93,11 +93,16 @@ jobs:
         with:
           mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
           sonatypeSnapshots: true
+          githubServer: false
           servers: |
             [{
                 "id": "${CLOUDSMITH_REPO}",
                 "username": "${CLOUDSMITH_USER}",
                 "password": "${CLOUDSMITH_API_KEY}"
+            },
+            {
+                "id": "github",
+                "configuration": {"httpHeaders": {"property": {"name": "Authorization","value": "Bearer ${{ secrets.GITHUB_TOKEN }}"}}}
             }]
       - name: Set up Maven
         run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
