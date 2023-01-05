@@ -78,6 +78,10 @@ jobs:
                 "id": "sonatype-nexus-snapshots",
                 "username": "${OSSRH_USER}",
                 "password": "${OSSRH_PASS}"
+            },
+            {
+                "id": "github",
+                "configuration": {"httpHeaders": {"property": {"name": "Authorization","value": "Bearer ${{ secrets.GITHUB_TOKEN }}"}}}
             }]
       - name: Set up Maven
         run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
