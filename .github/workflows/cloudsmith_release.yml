@@ -141,7 +141,7 @@ jobs:
             cd -
           done
       - name: Upload artifact on failure
-        uses: actions/upload-artifact@v3.1.1
+        uses: actions/upload-artifact@v3.1.2
         if: failure() && inputs.failure-upload-path != ''
         with:
           name: failure-${{ inputs.os }}-${{ inputs.jdk }}-${{ inputs.jdk-distribution }}

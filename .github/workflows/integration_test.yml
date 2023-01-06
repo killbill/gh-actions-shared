@@ -255,7 +255,7 @@ jobs:
           docker stop it_db_1 || true
           echo "::endgroup::"
       - name: Upload logs on failure
-        uses: actions/upload-artifact@v3.1.1
+        uses: actions/upload-artifact@v3.1.2
         if: failure()
         with:
           name: failure-tomcat_logs-${{ matrix.database-adapter }}
