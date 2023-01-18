@@ -1,7 +1,7 @@
 name: release
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       parent_version:
         description: 'New killbill-oss-parent version'
