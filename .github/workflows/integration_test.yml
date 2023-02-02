@@ -91,6 +91,7 @@ jobs:
             docker-compose-file: 'docker-compose.ci.mysql.yml'
             java-version: '11'
             java-distribution: 'temurin'
+            integration-test-profile: 'integration-mysql'
           - ruby-version: '2.6.0'
             database-adapter: 'postgresql'
             database-user: 'postgres'
@@ -99,6 +100,7 @@ jobs:
             docker-compose-file: 'docker-compose.ci.postgresql.yml'
             java-version: '11'
             java-distribution: 'temurin'
+            integration-test-profile: 'integration-postgresql'
       max-parallel: ${{ inputs.max-parallel }}
     steps:
       - name: Set environment variables
@@ -216,15 +218,15 @@ jobs:
             count=$(( count + 1 ))
             sleep 1
           done
-      - name: Run Integration Tests
-        run: ./mvnw --errors --batch-mode --show-version -Pintegration-mysql ${{ inputs.maven_args_tests }} ${{ inputs.test-goal }}
+      - name: Run Java Integration Tests
+        run: ./mvnw --errors --batch-mode --show-version -P${{ matrix.integration-test-profile }} ${{ inputs.maven_args_tests }} ${{ inputs.test-goal }}
       - name: Checkout killbill-integration-tests
         uses: actions/checkout@v3.1.0
         with:
           repository: killbill/killbill-integration-tests
           ref: ${{ inputs.integration_tests_ref }}
           path: killbill-integration-tests
-      - name: Run tests
+      - name: Run Ruby Integration Tests
         env:
           DB_ADAPTER: ${{ matrix.database-adapter }}
           DB_USER: ${{ matrix.database-user }}
