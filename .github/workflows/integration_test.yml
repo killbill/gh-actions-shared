@@ -36,6 +36,12 @@ on:
         required: false
         default: '-Dmaven.test.redirectTestOutputToFile=true -Dcheck.skip-dependency=true -Dcheck.skip-dependency-scope=true -Dcheck.skip-dependency-versions=true -Dcheck.skip-duplicate-finder=true -Dcheck.skip-enforcer=true -Dcheck.skip-rat=true -Dcheck.skip-spotbugs=true -DskipTests=true'
         type: string
+      maven_args_tests:
+        description: The arguments to pass to all Maven commands
+        required: false
+        default: '-Dmaven.test.redirectTestOutputToFile=true -Dcheck.skip-dependency=true -Dcheck.skip-dependency-scope=true -Dcheck.skip-dependency-versions=true -Dcheck.skip-duplicate-finder=true -Dcheck.skip-enforcer=true -Dcheck.skip-rat=true -Dcheck.skip-spotbugs=true'
+        type: string
+        
       maven_goal:
         description: The Maven goal(s) used to build the plugin
         required: false
@@ -210,8 +216,8 @@ jobs:
             count=$(( count + 1 ))
             sleep 1
           done
-      - name: Run tests
-        run: ./mvnw --errors --batch-mode --show-version -Pintegration-mysql ${{ inputs.maven_args }} ${{ inputs.test-goal }}
+      - name: Run Integration Tests
+        run: ./mvnw --errors --batch-mode --show-version -Pintegration-mysql ${{ inputs.maven_args_tests }} ${{ inputs.test-goal }}
       - name: Checkout killbill-integration-tests
         uses: actions/checkout@v3.1.0
         with:
