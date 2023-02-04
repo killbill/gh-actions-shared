@@ -256,5 +256,5 @@ jobs:
         if: failure() && inputs.failure-upload-path != ''
         with:
           name: failure-verify-${{ inputs.ff-os }}-${{ inputs.ff-jdk }}-${{ inputs.ff-jdk-distribution }}
-          path: ${{ inputs.failure-upload-path }}
+          path: 'target/*'
           retention-days: ${{ inputs.failure-upload-retention-days }}
