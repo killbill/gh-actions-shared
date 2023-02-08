@@ -219,7 +219,7 @@ jobs:
             sleep 1
           done
       - name: Run Java Integration Tests
-        if: inputs.test-goal == 'test verify' 
+        if: inputs.test-goal != '' 
         run: |
           ./mvnw --errors --batch-mode --show-version -P${{ matrix.integration-test-profile }} ${{ inputs.maven_args_tests }} ${{ inputs.test-goal }}
       - name: Checkout killbill-integration-tests
