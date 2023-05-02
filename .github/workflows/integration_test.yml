@@ -97,6 +97,15 @@ jobs:
             java-version: '11'
             java-distribution: 'temurin'
             integration-test-profile: 'integration-mysql'
+          - ruby-version: '2.6.0'
+            database-adapter: 'postgresql'
+            database-user: 'postgres'
+            database-password: 'postgres'
+            database-port: '5432'
+            docker-compose-file: 'docker-compose.ci.postgresql.yml'
+            java-version: '11'
+            java-distribution: 'temurin'
+            integration-test-profile: 'integration-postgresql'
       max-parallel: ${{ inputs.max-parallel }}
     steps:
       - name: Set environment variables
