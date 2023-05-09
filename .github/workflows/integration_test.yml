@@ -67,12 +67,11 @@ on:
         required: false
         default: true
         type: boolean
-      test-goal:
-        description: The Maven goal(s) used by test jobs
+      test-goal-java:
+        description: The Maven goal(s) used by Java test jobs
         required: false
         default: ''
-        type: string
-        
+        type: string        
 
 jobs:
   integration_test:
@@ -219,10 +218,11 @@ jobs:
             sleep 1
           done
       - name: Run Java Integration Tests
-        if: inputs.test-goal != '' 
+        if: inputs.test-goal-java != '' 
         run: |
-          ./mvnw --errors --batch-mode --show-version -P${{ matrix.integration-test-profile }} ${{ inputs.maven_args_tests }} ${{ inputs.test-goal }}
+          ./mvnw --errors --batch-mode --show-version -P${{ matrix.integration-test-profile }} ${{ inputs.maven_args_tests }} ${{ inputs.test-goal-java }}
       - name: Checkout killbill-integration-tests
+        if: inputs.integration_tests_goal != '' 
         uses: actions/checkout@v3.1.0
         with:
           repository: killbill/killbill-integration-tests
@@ -234,6 +234,7 @@ jobs:
           DB_USER: ${{ matrix.database-user }}
           DB_PASSWORD: ${{ matrix.database-password }}
           DB_PORT: ${{ matrix.database-port }}
+        if: inputs.integration_tests_goal != '' 
         run: |
           cd killbill-integration-tests
           bundle install --jobs=4 --retry=3
