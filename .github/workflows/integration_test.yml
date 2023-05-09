@@ -228,6 +228,7 @@ jobs:
         run: |
           ./mvnw --errors --batch-mode --show-version -P${{ matrix.integration-test-profile }} ${{ inputs.maven_args_tests }} ${{ inputs.test-goal-java }}
       - name: Checkout killbill-integration-tests
+        if: inputs.test-goal-ruby != '' 
         uses: actions/checkout@v3.1.0
         with:
           repository: killbill/killbill-integration-tests
