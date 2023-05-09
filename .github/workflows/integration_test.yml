@@ -71,13 +71,7 @@ on:
         description: The Maven goal(s) used by Java test jobs
         required: false
         default: ''
-        type: string
-      test-goal-ruby:
-        description: The Maven goal(s) used by Ruby test jobs
-        required: false
-        default: 'test verify'
         type: string        
-        
 
 jobs:
   integration_test:
@@ -228,7 +222,7 @@ jobs:
         run: |
           ./mvnw --errors --batch-mode --show-version -P${{ matrix.integration-test-profile }} ${{ inputs.maven_args_tests }} ${{ inputs.test-goal-java }}
       - name: Checkout killbill-integration-tests
-        if: inputs.test-goal-ruby != '' 
+        if: inputs.integration_tests_goal != '' 
         uses: actions/checkout@v3.1.0
         with:
           repository: killbill/killbill-integration-tests
@@ -240,7 +234,7 @@ jobs:
           DB_USER: ${{ matrix.database-user }}
           DB_PASSWORD: ${{ matrix.database-password }}
           DB_PORT: ${{ matrix.database-port }}
-        if: inputs.test-goal-ruby != '' 
+        if: inputs.integration_tests_goal != '' 
         run: |
           cd killbill-integration-tests
           bundle install --jobs=4 --retry=3
