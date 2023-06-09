@@ -2,7 +2,8 @@ name: update-version
 
 # This is supposed to be "Reusable Workflow", and included in other workflow file(s).
 # This workflow should be triggered with "repository_dispatch" event with payload:
-# - github.event.client_payload.property_name
+# - github.event.client_payload.property_name, with value: "killbill-commons.version",
+#   "killbill-base-plugin.version", "killbill-platform.version", or "killbill-client.version".
 # - github.event.client_payload.property_value
 
 on:
@@ -12,8 +13,9 @@ jobs:
   update_version:
     name: Update ${{github.event.client_payload.property_name}} from Repository Dispatch
     runs-on: ubuntu-22.04
-    # Cannot make env.* works in if statement
-    if: ${{github.event.client_payload.property_name != '' && github.event.client_payload.property_value != ''}}
+    if: github.event.client_payload.property_name != '' && 
+        github.event.client_payload.property_value != '' &&
+        contains(fromJSON('["killbill-commons.version", "killbill-base-plugin.version", "killbill-platform.version", "killbill-client.version"]'), github.event.client_payload.property_name)
     steps:
       - name: Checkout
         uses: actions/checkout@v3
