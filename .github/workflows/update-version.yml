@@ -1,0 +1,37 @@
+name: update-version
+
+# This is supposed to be "Reusable Workflow", and included in other workflow file(s).
+# This workflow should be triggered with "repository_dispatch" event with payload:
+# - github.event.client_payload.property_name
+# - github.event.client_payload.property_value
+
+on:
+  workflow_call:
+
+jobs:
+  update_version:
+    name: Update ${{github.event.client_payload.property_name}} from Repository Dispatch
+    runs-on: ubuntu-22.04
+    # Cannot make env.* works in if statement
+    if: ${{github.event.client_payload.property_name != '' && github.event.client_payload.property_value != ''}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup git user
+        env:
+          BUILD_USER: ${{ secrets.BUILD_USER }}
+          BUILD_TOKEN: ${{ secrets.BUILD_TOKEN }}
+        run: |
+          git config --global user.email "contact@killbill.io"
+          git config --global user.name "Kill Bill core team"
+          git config --global url."https://${BUILD_USER}:${BUILD_TOKEN}@github.com/".insteadOf "git@github.com:"
+      # Cannot use Mudlet/xmlstarlet-action@master because always get "Invalid expression: //x:properties/x:${POM_PROPERTY_NAME}"
+      - name: Install XML Starlet
+        run: sudo apt-get install xmlstarlet
+      - name: Update ${{github.event.client_payload.property_name}} Property in pom.xml file
+        run: xmlstarlet ed --inplace -N x="http://maven.apache.org/POM/4.0.0" -u "//x:properties/x:${{github.event.client_payload.property_name}}" -v ${{github.event.client_payload.property_value}} pom.xml
+      - name: Commit and Push pom.xml
+        run: |
+          git add pom.xml
+          git commit -m "[github-action] update ${{github.event.client_payload.property_name}} value to ${{github.event.client_payload.property_value}}"
+          git push origin master
