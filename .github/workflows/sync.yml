@@ -22,9 +22,14 @@ on:
         required: false
         type: string
       branch:
-        description: The branch to sync with master
+        description: The branch to sync with sourcebranch
         required: false
         default: 'work-for-release-0.23.x'
+        type: string
+      sourcebranch:
+        description: The branch to sync from
+        required: false
+        default: 'master'
         type: string
 
 jobs:
