@@ -22,9 +22,14 @@ on:
         required: false
         type: string
       branch:
-        description: The branch to sync with master
+        description: The branch to sync with sourcebranch
         required: false
         default: 'work-for-release-0.23.x'
+        type: string
+      sourcebranch:
+        description: The branch to sync from
+        required: false
+        default: 'master'
         type: string
 
 jobs:
@@ -43,8 +48,8 @@ jobs:
         run: |
           git config --global user.email "contact@killbill.io"
           git config --global user.name "Kill Bill core team"
-      - name: Merge master branch
-        run: git merge origin/master
+      - name: Merge source branch
+        run: git merge origin/${{inputs.sourcebranch}}
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v4.2.0
         with:
