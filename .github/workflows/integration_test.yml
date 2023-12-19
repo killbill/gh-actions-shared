@@ -82,7 +82,7 @@ jobs:
       fail-fast: ${{ inputs.fail-fast }}
       matrix:
         include:
-          - ruby-version: '2.6.0'
+          - ruby-version: '3.0.0'
             database-adapter: 'mysql2'
             database-user: 'root'
             database-password: 'root'
