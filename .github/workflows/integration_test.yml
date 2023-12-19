@@ -91,7 +91,7 @@ jobs:
             java-version: '11'
             java-distribution: 'temurin'
             integration-test-profile: 'integration-mysql'
-          - ruby-version: '2.6.0'
+          - ruby-version: '3.0.0'
             database-adapter: 'postgresql'
             database-user: 'postgres'
             database-password: 'postgres'
