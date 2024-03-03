@@ -51,7 +51,7 @@ jobs:
       - name: Merge source branch
         run: git merge origin/${{inputs.sourcebranch}}
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v4.2.3
+        uses: peter-evans/create-pull-request@v6.0.1
         with:
           branch: ${{ inputs.branch }}-promotion
           title: Sync master into ${{ inputs.branch }}
