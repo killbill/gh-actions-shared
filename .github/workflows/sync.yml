@@ -57,7 +57,7 @@ jobs:
           title: Sync master into ${{ inputs.branch }}
           body: Merge latest master into ${{ inputs.branch }}
       - name: Upload artifact on failure
-        uses: actions/upload-artifact@v3.1.1
+        uses: actions/upload-artifact@v4.3.1
         if: failure() && inputs.failure-upload-path != ''
         with:
           name: failure-${{ inputs.os }}-${{ inputs.jdk }}-${{ inputs.jdk-distribution }}
