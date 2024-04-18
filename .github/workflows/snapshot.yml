@@ -99,7 +99,7 @@ jobs:
           OSSRH_PASS: ${{ secrets.OSSRH_PASS }}
         run: ./mvnw --errors --batch-mode --show-version ${{ inputs.maven_args }} ${{ inputs.goal }}
       - name: Upload artifact on failure
-        uses: actions/upload-artifact@v3.1.1
+        uses: actions/upload-artifact@v4.3.2
         if: failure() && inputs.failure-upload-path != ''
         with:
           name: failure-${{ inputs.os }}-${{ inputs.jdk }}-${{ inputs.jdk-distribution }}
