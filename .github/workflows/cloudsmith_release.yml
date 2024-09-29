@@ -63,13 +63,18 @@ on:
         required: false
         type: string
       group_id:
-        description: The group id of the released artifact
+        description: The group id of the released artifact(s)
         required: true
         type: string
       artifact_id:
-        description: The artifact id of the released artifact
+        description: The artifact id of the artifact(s) to release
         required: false
         default: '*'
+        type: string
+      artifact_suffix:
+        description: Optional suffix to append to the released artifact(s) id (e.g., -features)
+        required: false
+        default: ''
         type: string
 
 jobs:
@@ -128,7 +133,7 @@ jobs:
             # Make sure the current pom.xml file isn't uploaded
             cp $f /var/tmp/
             filename=$(basename $f)
-            artifactId=${filename%-$VERSION*}
+            artifactId=${filename%-$VERSION*}${{ inputs.artifact_suffix }}
 
             cd /var/tmp
             echo "Deploying $filename"
