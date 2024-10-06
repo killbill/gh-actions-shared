@@ -12,6 +12,8 @@ on:
         required: true
       CLOUDSMITH_API_KEY:
         required: true
+      extra-env:
+        required: false
     inputs:
       maven_args:
         description: The arguments to pass to all Maven commands when building the code
@@ -82,6 +84,10 @@ jobs:
     runs-on: ${{ inputs.os }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
+      - name: Set environment variables
+        run: |
+          echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("::add-mask::\(.value|tostring)")|.[]'
+          echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
       - name: Checkout
         uses: actions/checkout@v3.1.0
         with:
