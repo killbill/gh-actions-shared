@@ -12,6 +12,8 @@ on:
         required: true
       CLOUDSMITH_API_KEY:
         required: true
+      extra-env:
+        required: false
     inputs:
       maven_args:
         description: The arguments to pass to all Maven commands when building the code
@@ -63,13 +65,18 @@ on:
         required: false
         type: string
       group_id:
-        description: The group id of the released artifact
+        description: The group id of the released artifact(s)
         required: true
         type: string
       artifact_id:
-        description: The artifact id of the released artifact
+        description: The artifact id of the artifact(s) to release
         required: false
         default: '*'
+        type: string
+      artifact_suffix:
+        description: Optional suffix to append to the released artifact(s) id (e.g., -features)
+        required: false
+        default: ''
         type: string
 
 jobs:
@@ -77,6 +84,10 @@ jobs:
     runs-on: ${{ inputs.os }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
+      - name: Set environment variables
+        run: |
+          echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("::add-mask::\(.value|tostring)")|.[]'
+          echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
       - name: Checkout
         uses: actions/checkout@v3.1.0
         with:
@@ -128,7 +139,7 @@ jobs:
             # Make sure the current pom.xml file isn't uploaded
             cp $f /var/tmp/
             filename=$(basename $f)
-            artifactId=${filename%-$VERSION*}
+            artifactId=${filename%-$VERSION*}${{ inputs.artifact_suffix }}
 
             cd /var/tmp
             echo "Deploying $filename"
