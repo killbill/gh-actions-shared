@@ -21,6 +21,11 @@ on:
         description: The plugin name
         required: true
         type: string
+      docker_login:
+        description: Whether to login to Docker Hub
+        required: false
+        default: 'false'
+        type: string
       ddl_file:
         description: The DDL file for the plugin
         required: false
@@ -41,7 +46,6 @@ on:
         required: false
         default: '-Dmaven.test.redirectTestOutputToFile=true -Dcheck.skip-dependency=true -Dcheck.skip-dependency-scope=true -Dcheck.skip-dependency-versions=true -Dcheck.skip-duplicate-finder=true -Dcheck.skip-enforcer=true -Dcheck.skip-rat=true -Dcheck.skip-spotbugs=true'
         type: string
-        
       maven_goal:
         description: The Maven goal(s) used to build the plugin
         required: false
@@ -71,7 +75,7 @@ on:
         description: The Maven goal(s) used by Java test jobs
         required: false
         default: ''
-        type: string        
+        type: string
 
 jobs:
   integration_test:
@@ -124,6 +128,12 @@ jobs:
           sonatypeSnapshots: true
           githubServer: false
           servers: '[{"id": "github","configuration": {"httpHeaders": {"property": {"name": "Authorization","value": "Bearer ${{ secrets.GITHUB_TOKEN }}"}}}}]'
+      - name: Login to Docker Hub
+        if: inputs.docker_login != 'false'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
