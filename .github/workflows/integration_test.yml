@@ -61,6 +61,11 @@ on:
         required: false
         default: 100
         type: number
+      ruby_version:
+        description: The Ruby version used for builds
+        required: false
+        default: "3.3"
+        type: string
       timeout-minutes:
         description: 'timeout-minutes used by the builds (defaults to 360)'
         required: false
@@ -86,24 +91,22 @@ jobs:
       fail-fast: ${{ inputs.fail-fast }}
       matrix:
         include:
-          - ruby-version: '3.0.0'
-            database-adapter: 'mysql2'
-            database-user: 'root'
-            database-password: 'root'
-            database-port: '3306'
-            docker-compose-file: 'docker-compose.ci.mysql.yml'
-            java-version: '11'
-            java-distribution: 'temurin'
-            integration-test-profile: 'integration-mysql'
-          - ruby-version: '3.0.0'
-            database-adapter: 'postgresql'
-            database-user: 'postgres'
-            database-password: 'postgres'
-            database-port: '5432'
-            docker-compose-file: 'docker-compose.ci.postgresql.yml'
-            java-version: '11'
-            java-distribution: 'temurin'
-            integration-test-profile: 'integration-postgresql'
+          - database-adapter: "mysql2"
+            database-user: "root"
+            database-password: "root"
+            database-port: "3306"
+            docker-compose-file: "docker-compose.ci.mysql.yml"
+            java-version: "11"
+            java-distribution: "temurin"
+            integration-test-profile: "integration-mysql"
+          - database-adapter: "postgresql"
+            database-user: "postgres"
+            database-password: "postgres"
+            database-port: "5432"
+            docker-compose-file: "docker-compose.ci.postgresql.yml"
+            java-version: "11"
+            java-distribution: "temurin"
+            integration-test-profile: "integration-postgresql"
       max-parallel: ${{ inputs.max-parallel }}
     steps:
       - name: Set environment variables
@@ -137,7 +140,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ${{ matrix.ruby-version }}
+          ruby-version: ${{ inputs.ruby_version }}
           rubygems: latest
           bundler-cache: true
       - name: Install kpm
