@@ -62,11 +62,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up JDK
-        uses: actions/setup-java@v3.6.0
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.jdk }}
           distribution: ${{ inputs.jdk-distribution }}
-          #cache: 'maven'
+          cache: 'maven'
       - name: Configure Sonatype mirror
         uses: s4u/maven-settings-action@v2.8.0
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).

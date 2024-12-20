@@ -118,11 +118,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up JDK
-        uses: actions/setup-java@v3.6.0
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java-version }}
           distribution: ${{ matrix.java-distribution }}
-          #cache: 'maven'
+          cache: 'maven'
       - name: Configure Sonatype mirror
         uses: s4u/maven-settings-action@v2.8.0
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
@@ -231,11 +231,11 @@ jobs:
             sleep 1
           done
       - name: Run Java Integration Tests
-        if: inputs.test-goal-java != '' 
+        if: inputs.test-goal-java != ''
         run: |
           ./mvnw --errors --batch-mode --show-version -P${{ matrix.integration-test-profile }} ${{ inputs.maven_args_tests }} ${{ inputs.test-goal-java }}
       - name: Checkout killbill-integration-tests
-        if: inputs.integration_tests_goal != '' 
+        if: inputs.integration_tests_goal != ''
         uses: actions/checkout@v3.1.0
         with:
           repository: killbill/killbill-integration-tests
@@ -247,7 +247,7 @@ jobs:
           DB_USER: ${{ matrix.database-user }}
           DB_PASSWORD: ${{ matrix.database-password }}
           DB_PORT: ${{ matrix.database-port }}
-        if: inputs.integration_tests_goal != '' 
+        if: inputs.integration_tests_goal != ''
         run: |
           cd killbill-integration-tests
           bundle install --jobs=4 --retry=3
