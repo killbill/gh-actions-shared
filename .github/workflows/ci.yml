@@ -139,7 +139,7 @@ jobs:
           distribution: ${{ inputs.ff-jdk-distribution }}
           cache: 'maven'
       - name: Configure Sonatype mirror
-        uses: s4u/maven-settings-action@v2.8.0
+        uses: s4u/maven-settings-action@v3
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
         with:
           mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
@@ -199,7 +199,7 @@ jobs:
           cache: 'maven'
       - name: Configure Sonatype mirror
         if: steps.should-run.conclusion == 'success'
-        uses: s4u/maven-settings-action@v2.8.0
+        uses: s4u/maven-settings-action@v3
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
         with:
           mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
@@ -240,7 +240,7 @@ jobs:
           distribution: ${{ inputs.ff-jdk-distribution }}
           cache: 'maven'
       - name: Configure Sonatype mirror
-        uses: s4u/maven-settings-action@v2.8.0
+        uses: s4u/maven-settings-action@v3
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
         with:
           mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
