@@ -38,7 +38,7 @@ jobs:
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3.1.0
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: true
@@ -57,7 +57,7 @@ jobs:
           title: Sync master into ${{ inputs.branch }}
           body: Merge latest master into ${{ inputs.branch }}
       - name: Upload artifact on failure
-        uses: actions/upload-artifact@v3.1.1
+        uses: actions/upload-artifact@v4
         if: failure() && inputs.failure-upload-path != ''
         with:
           name: failure-${{ inputs.os }}-${{ inputs.jdk }}-${{ inputs.jdk-distribution }}

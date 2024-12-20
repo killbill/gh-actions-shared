@@ -129,7 +129,7 @@ jobs:
           echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("::add-mask::\(.value|tostring)")|.[]'
           echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
       - name: Checkout
-        uses: actions/checkout@v3.1.0
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Set up JDK
@@ -139,7 +139,7 @@ jobs:
           distribution: ${{ inputs.ff-jdk-distribution }}
           cache: 'maven'
       - name: Configure Sonatype mirror
-        uses: s4u/maven-settings-action@v2.8.0
+        uses: s4u/maven-settings-action@v3.1.0
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
         with:
           mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
@@ -151,7 +151,7 @@ jobs:
       - name: Run tests
         run: ./mvnw --errors --batch-mode --show-version -P${{ inputs.ff-profile }} ${{ inputs.maven_args }} ${{ inputs.ff-goal }}
       - name: Upload artifact on failure
-        uses: actions/upload-artifact@v3.1.1
+        uses: actions/upload-artifact@v4
         if: failure() && inputs.failure-upload-path != ''
         with:
           name: failure-${{ inputs.ff-os }}-${{ inputs.ff-jdk }}-${{ inputs.ff-jdk-distribution }}
@@ -187,7 +187,7 @@ jobs:
           echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
       - name: Checkout
         if: steps.should-run.conclusion == 'success'
-        uses: actions/checkout@v3.1.0
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Set up JDK
@@ -199,7 +199,7 @@ jobs:
           cache: 'maven'
       - name: Configure Sonatype mirror
         if: steps.should-run.conclusion == 'success'
-        uses: s4u/maven-settings-action@v2.8.0
+        uses: s4u/maven-settings-action@v3.1.0
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
         with:
           mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
@@ -213,7 +213,7 @@ jobs:
         if: steps.should-run.conclusion == 'success'
         run: ./mvnw --errors --batch-mode --show-version -P${{ matrix.profile }} ${{ inputs.maven_args }} ${{ inputs.test-goal }}
       - name: Upload artifact on failure
-        uses: actions/upload-artifact@v3.1.1
+        uses: actions/upload-artifact@v4
         if: steps.should-run.conclusion == 'success' && failure() && inputs.failure-upload-path != ''
         with:
           name: failure-${{ matrix.os }}-${{ matrix.jdk }}-${{ matrix.distribution }}
@@ -230,7 +230,7 @@ jobs:
           echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("::add-mask::\(.value|tostring)")|.[]'
           echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
       - name: Checkout
-        uses: actions/checkout@v3.1.0
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Set up JDK
@@ -240,7 +240,7 @@ jobs:
           distribution: ${{ inputs.ff-jdk-distribution }}
           cache: 'maven'
       - name: Configure Sonatype mirror
-        uses: s4u/maven-settings-action@v2.8.0
+        uses: s4u/maven-settings-action@v3.1.0
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
         with:
           mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
@@ -252,7 +252,7 @@ jobs:
       - name: Verify
         run: ./mvnw --errors --batch-mode --show-version -P${{ inputs.ff-profile }} ${{ inputs.verify_maven_args }} ${{ inputs.verify-goal }}
       - name: Upload artifact on failure
-        uses: actions/upload-artifact@v3.1.1
+        uses: actions/upload-artifact@v4
         if: failure() && inputs.failure-upload-path != ''
         with:
           name: failure-verify-${{ inputs.ff-os }}-${{ inputs.ff-jdk }}-${{ inputs.ff-jdk-distribution }}
