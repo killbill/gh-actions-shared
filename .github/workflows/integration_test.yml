@@ -86,7 +86,7 @@ jobs:
   integration_test:
     name: jdk-${{ matrix.java-version }} ${{ matrix.database-adapter }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: ${{ inputs.fail-fast }}
       matrix:
