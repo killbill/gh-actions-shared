@@ -10,7 +10,7 @@ on:
       os:
         description: The OS used
         required: false
-        default: 'ubuntu-latest'
+        default: 'ubuntu-22.04'
         type: string
       timeout-minutes:
         description: 'timeout-minutes used by the builds (defaults to 360)'

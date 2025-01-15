@@ -27,7 +27,7 @@ on:
       os-matrix:
         description: 'os matrix as json array'
         required: false
-        default: '[ "ubuntu-latest" ]'
+        default: '[ "ubuntu-22.04" ]'
         type: string
       jdk-matrix:
         description: 'jdk matrix as json array'
@@ -57,7 +57,7 @@ on:
       ff-os:
         description: The os used during fail-fast-build job
         required: false
-        default: 'ubuntu-latest'
+        default: 'ubuntu-22.04'
         type: string
       ff-jdk:
         description: The jdk version used during fail-fast-build job
