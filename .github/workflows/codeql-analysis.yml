@@ -19,7 +19,7 @@ on:
       os:
         description: The OS used
         required: false
-        default: 'ubuntu-latest'
+        default: 'ubuntu-22.04'
         type: string
       jdk:
         description: The JDK used
