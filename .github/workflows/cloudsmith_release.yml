@@ -78,6 +78,11 @@ on:
         required: false
         default: ''
         type: string
+      use_sha_in_name:
+        description: Flag that specifies whether the sha1 should be used in the JAR file name
+        required: false
+        default: 'true'
+        type: string
 
 jobs:
   cloudsmith_release:
@@ -118,6 +123,7 @@ jobs:
       - name: Set up Maven
         run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
       - name: Set new version
+        if: inputs.use_sha_in_name == 'true'
         run: |
           current_version_with_snapshot=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
           current_version_without_snapshot=${current_version_with_snapshot%SNAPSHOT*}
