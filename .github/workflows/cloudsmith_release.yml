@@ -126,7 +126,9 @@ jobs:
         if: inputs.use_sha_in_name == 'true'
         run: |
           current_version_with_snapshot=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "::notice ::current_version_with_snapshot is ${current_version_with_snapshot}"
           current_version_without_snapshot=${current_version_with_snapshot%SNAPSHOT*}
+          echo "::notice ::current_version_without_snapshot is ${current_version_without_snapshot}"
           new_version="${current_version_without_snapshot}$(git rev-parse --short HEAD)"
           ./mvnw versions:set -DnewVersion=${new_version}
           echo "::notice ::Version is ${new_version}"
