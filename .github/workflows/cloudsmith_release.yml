@@ -125,16 +125,11 @@ jobs:
       - name: Set new version
         run: |
           current_version_with_snapshot=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "::notice ::current_version_with_snapshot is ${current_version_with_snapshot}"
           current_version_without_snapshot=${current_version_with_snapshot%SNAPSHOT*}
-          echo "::notice ::current_version_without_snapshot is ${current_version_without_snapshot}"
           if [[ "${{ inputs.use_sha_in_name }}" == "true" ]]; then
-            echo "::notice ::in if"
             new_version="${current_version_without_snapshot}$(git rev-parse --short HEAD)"
           else
-            echo "::notice ::in else"
             current_version_without_snapshot=${current_version_without_snapshot%-}
-            echo "::notice ::current_version_without_snapshot without - is ${current_version_without_snapshot}"
             new_version=${current_version_without_snapshot}
           fi                
           echo "::notice ::Version is ${new_version}"
