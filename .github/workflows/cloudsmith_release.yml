@@ -123,13 +123,21 @@ jobs:
       - name: Set up Maven
         run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
       - name: Set new version
-        if: inputs.use_sha_in_name == 'true'
         run: |
           current_version_with_snapshot=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
           echo "::notice ::current_version_with_snapshot is ${current_version_with_snapshot}"
           current_version_without_snapshot=${current_version_with_snapshot%SNAPSHOT*}
           echo "::notice ::current_version_without_snapshot is ${current_version_without_snapshot}"
-          new_version="${current_version_without_snapshot}$(git rev-parse --short HEAD)"
+          if [[ "${{ inputs.use_sha_in_name }}" == "true" ]]; then
+            echo "::notice ::in if"
+            new_version="${current_version_without_snapshot}$(git rev-parse --short HEAD)"
+          else
+            echo "::notice ::in else"
+            current_version_without_snapshot=${current_version_without_snapshot%-}
+            echo "::notice ::current_version_without_snapshot without - is ${current_version_without_snapshot}"
+            new_version=${current_version_without_snapshot}
+          fi                
+          echo "::notice ::Version is ${new_version}"
           ./mvnw versions:set -DnewVersion=${new_version}
           echo "::notice ::Version is ${new_version}"
       - name: Build artifacts
