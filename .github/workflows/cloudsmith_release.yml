@@ -110,6 +110,7 @@ jobs:
           distribution: ${{ inputs.jdk-distribution }}
           cache: 'maven'
       - name: Configure Ruby
+        if: github.event.inputs.artifact_id == 'kaui-standalone'
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: 'jruby-9.4.2.0'
