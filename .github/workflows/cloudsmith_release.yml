@@ -170,12 +170,6 @@ jobs:
             echo "::notice ::filename is ${filename}"
             cd /var/tmp
             echo "Deploying $filename"
-            ./mvnw --errors --batch-mode --show-version ${{ inputs.maven_deploy_args }} ${{ inputs.deploy_goal }} -Dfile=$filename \
-                                                                                                                  -DrepositoryId=$CLOUDSMITH_REPO \
-                                                                                                                  -Durl=https://maven.cloudsmith.io/killbill/$CLOUDSMITH_REPO \
-                                                                                                                  -DgroupId=${{ inputs.group_id }} \
-                                                                                                                  -DartifactId=$artifactId \
-                                                                                                                  -Dversion=$VERSION
             cd -
           done
       - name: Upload artifact on failure
