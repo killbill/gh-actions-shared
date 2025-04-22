@@ -83,11 +83,6 @@ on:
         required: false
         default: 'true'
         type: string
-      artifact_extension:
-        description: Extension of the artifact
-        required: false
-        default: 'jar'
-        type: string
 
 
 jobs:
@@ -160,11 +155,8 @@ jobs:
           if [[ "${{ inputs.artifact_id }}" == "kaui-standalone" ]]; then
             FILES=killbill-admin-ui-standalone.war
           else
-            FILES=${{ inputs.artifact_id }}-$VERSION.${{ inputs.artifact_extension }}
+            FILES=${{ inputs.artifact_id }}-$VERSION.jar
           fi
-          echo "::notice ::inputs.artifact_id is ${{ inputs.artifact_id }}"
-          echo "::notice ::VERSION is ${VERSION}"
-          echo "::notice ::FILES is ${FILES}"
           for f in `find . -type f -name "$FILES"`; do
             # Make sure the current pom.xml file isn't uploaded
             cp $f /var/tmp/
