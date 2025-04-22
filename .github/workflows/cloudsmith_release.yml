@@ -158,10 +158,12 @@ jobs:
           cp -r .mvn mvnw /var/tmp/
           VERSION=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
           FILES=${{ inputs.artifact_id }}-$VERSION.${{ inputs.artifact_extension }}
+          FILES2=killbill-admin-ui-standalone.war
           echo "::notice ::inputs.artifact_id is ${{ inputs.artifact_id }}"
           echo "::notice ::VERSION is ${VERSION}"
           echo "::notice ::FILES is ${FILES}"
-          for f in `find . -type f`; do
+          echo "::notice ::FILES2 is ${FILES2}"
+          for f in `find . -type f -name "$FILES2"`; do
             # Make sure the current pom.xml file isn't uploaded
             cp $f /var/tmp/
             filename=$(basename $f)
@@ -170,6 +172,12 @@ jobs:
             echo "::notice ::filename is ${filename}"
             cd /var/tmp
             echo "Deploying $filename"
+            ./mvnw --errors --batch-mode --show-version ${{ inputs.maven_deploy_args }} ${{ inputs.deploy_goal }} -Dfile=$filename \
+                                                                                                                  -DrepositoryId=$CLOUDSMITH_REPO \
+                                                                                                                  -Durl=https://maven.cloudsmith.io/killbill/$CLOUDSMITH_REPO \
+                                                                                                                  -DgroupId=${{ inputs.group_id }} \
+                                                                                                                  -DartifactId=$artifactId \
+                                                                                                                  -Dversion=$VERSION
             cd -
           done
       - name: Upload artifact on failure
