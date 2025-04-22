@@ -158,12 +158,14 @@ jobs:
           cp -r .mvn mvnw /var/tmp/
           VERSION=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
           FILES=${{ inputs.artifact_id }}-$VERSION.${{ inputs.artifact_extension }}
+          echo "::notice ::VERSION is ${VERSION}"
+          echo "::notice ::FILES is ${FILES}"
           for f in `find . -type f -name "$FILES"`; do
             # Make sure the current pom.xml file isn't uploaded
             cp $f /var/tmp/
             filename=$(basename $f)
             artifactId=${filename%-$VERSION*}${{ inputs.artifact_suffix }}
-
+            echo "::notice ::artifactId is ${artifactId}"
             cd /var/tmp
             echo "Deploying $filename"
             ./mvnw --errors --batch-mode --show-version ${{ inputs.maven_deploy_args }} ${{ inputs.deploy_goal }} -Dfile=$filename \
