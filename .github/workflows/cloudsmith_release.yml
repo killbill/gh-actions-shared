@@ -161,7 +161,7 @@ jobs:
           echo "::notice ::inputs.artifact_id is ${{ inputs.artifact_id }}"
           echo "::notice ::VERSION is ${VERSION}"
           echo "::notice ::FILES is ${FILES}"
-          for f in `find . -type f -name "$FILES"`; do
+          for f in `find . -type f`; do
             # Make sure the current pom.xml file isn't uploaded
             cp $f /var/tmp/
             filename=$(basename $f)
