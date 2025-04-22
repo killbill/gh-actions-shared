@@ -83,6 +83,12 @@ on:
         required: false
         default: 'true'
         type: string
+      artifact_extension:
+        description: Extension of the artifact
+        required: false
+        default: 'jar'
+        type: string
+
 
 jobs:
   cloudsmith_release:
@@ -145,7 +151,7 @@ jobs:
         run: |
           cp -r .mvn mvnw /var/tmp/
           VERSION=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
-          FILES=${{ inputs.artifact_id }}-$VERSION.jar
+          FILES=${{ inputs.artifact_id }}-$VERSION.${{ inputs.artifact_extension }}
           for f in `find . -type f -name "$FILES"`; do
             # Make sure the current pom.xml file isn't uploaded
             cp $f /var/tmp/
