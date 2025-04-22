@@ -157,19 +157,19 @@ jobs:
         run: |
           cp -r .mvn mvnw /var/tmp/
           VERSION=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
-          FILES=${{ inputs.artifact_id }}-$VERSION.${{ inputs.artifact_extension }}
-          FILES2=killbill-admin-ui-standalone.war
+          if [[ "${{ inputs.artifact_id }}" == "kaui-standalone" ]]; then
+            FILES=killbill-admin-ui-standalone.war
+          else
+            FILES=${{ inputs.artifact_id }}-$VERSION.${{ inputs.artifact_extension }}
+          fi
           echo "::notice ::inputs.artifact_id is ${{ inputs.artifact_id }}"
           echo "::notice ::VERSION is ${VERSION}"
           echo "::notice ::FILES is ${FILES}"
-          echo "::notice ::FILES2 is ${FILES2}"
-          for f in `find . -type f -name "$FILES2"`; do
+          for f in `find . -type f -name "$FILES"`; do
             # Make sure the current pom.xml file isn't uploaded
             cp $f /var/tmp/
             filename=$(basename $f)
             artifactId=${filename%-$VERSION*}${{ inputs.artifact_suffix }}
-            echo "::notice ::artifactId is ${artifactId}"
-            echo "::notice ::filename is ${filename}"
             cd /var/tmp
             echo "Deploying $filename"
             ./mvnw --errors --batch-mode --show-version ${{ inputs.maven_deploy_args }} ${{ inputs.deploy_goal }} -Dfile=$filename \
