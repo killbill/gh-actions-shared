@@ -88,6 +88,12 @@ on:
         required: false
         default: 'false'
         type: string
+      target_file:
+        description: Target file name
+        required: false
+        default: ''
+        type: string
+
 
 
 
@@ -158,8 +164,8 @@ jobs:
         run: |
           cp -r .mvn mvnw /var/tmp/
           VERSION=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
-          if [[ "${{ inputs.artifact_id }}" == "kaui-standalone" ]]; then
-            FILES=killbill-admin-ui-standalone.war
+          if [[ "${{ inputs.target_file }}" != '' ]]; then
+            FILES=${{ inputs.target_file }}
           else
             FILES=${{ inputs.artifact_id }}-$VERSION.jar
           fi
