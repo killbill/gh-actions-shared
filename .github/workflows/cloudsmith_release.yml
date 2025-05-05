@@ -161,7 +161,11 @@ jobs:
             # Make sure the current pom.xml file isn't uploaded
             cp $f /var/tmp/
             filename=$(basename $f)
-            artifactId=${filename%-$VERSION*}${{ inputs.artifact_suffix }}
+            if [[ "${{ inputs.artifact_id }}" == "kaui-standalone" ]]; then
+              artifactId=${filename%.war}
+            else
+              artifactId=${filename%-$VERSION*}${{ inputs.artifact_suffix }}
+            fi
             cd /var/tmp
             echo "Deploying $filename"
             echo "Debug artifact_suffix ${{ inputs.artifact_suffix }}"
