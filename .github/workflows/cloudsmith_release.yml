@@ -173,8 +173,8 @@ jobs:
             # Make sure the current pom.xml file isn't uploaded
             cp $f /var/tmp/
             filename=$(basename $f)
-            if [[ "${{ inputs.artifact_id }}" == "kaui-standalone" ]]; then
-              artifactId=${filename%.war}
+            if [[ "${{ inputs.target_file }}" != '' ]]; then
+              artifactId=${filename%.*}
             else
               artifactId=${filename%-$VERSION*}${{ inputs.artifact_suffix }}
             fi
