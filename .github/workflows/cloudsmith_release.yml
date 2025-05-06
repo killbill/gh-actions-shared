@@ -83,6 +83,19 @@ on:
         required: false
         default: 'true'
         type: string
+      with_ruby:
+        description: Flag that specifies whether Ruby should be set up
+        required: false
+        default: 'false'
+        type: string
+      target_file:
+        description: Target file name
+        required: false
+        default: ''
+        type: string
+
+
+
 
 jobs:
   cloudsmith_release:
@@ -103,6 +116,12 @@ jobs:
           java-version: ${{ inputs.jdk }}
           distribution: ${{ inputs.jdk-distribution }}
           cache: 'maven'
+      - name: Configure Ruby
+        if: ${{ inputs.with_ruby == 'true' }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 'jruby-9.4.2.0'
+          bundler-cache: false
       - name: Configure Sonatype mirror
         uses: s4u/maven-settings-action@v3.1.0
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
@@ -145,13 +164,20 @@ jobs:
         run: |
           cp -r .mvn mvnw /var/tmp/
           VERSION=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
-          FILES=${{ inputs.artifact_id }}-$VERSION.jar
+          if [[ "${{ inputs.target_file }}" != '' ]]; then
+            FILES=${{ inputs.target_file }}
+          else
+            FILES=${{ inputs.artifact_id }}-$VERSION.jar
+          fi
           for f in `find . -type f -name "$FILES"`; do
             # Make sure the current pom.xml file isn't uploaded
             cp $f /var/tmp/
             filename=$(basename $f)
-            artifactId=${filename%-$VERSION*}${{ inputs.artifact_suffix }}
-
+            if [[ "${{ inputs.target_file }}" != '' ]]; then
+              artifactId=${filename%.*}
+            else
+              artifactId=${filename%-$VERSION*}${{ inputs.artifact_suffix }}
+            fi
             cd /var/tmp
             echo "Deploying $filename"
             ./mvnw --errors --batch-mode --show-version ${{ inputs.maven_deploy_args }} ${{ inputs.deploy_goal }} -Dfile=$filename \
