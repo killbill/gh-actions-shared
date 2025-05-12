@@ -67,6 +67,8 @@ jobs:
           java-version: ${{ inputs.jdk }}
           distribution: ${{ inputs.jdk-distribution }}
           cache: 'maven'
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
       - name: Set up Maven
         run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
       - name: Set new version
