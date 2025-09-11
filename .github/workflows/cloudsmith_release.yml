@@ -125,6 +125,12 @@ jobs:
       - name: Install Bundler 2.6.9
         if: ${{ inputs.with_ruby == 'true' }}
         run: gem install bundler -v 2.6.9
+      - name: Configure Bundler for GitHub
+        if: ${{ inputs.with_ruby == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bundle config --global github.com $GITHUB_TOKEN
       - name: Configure Sonatype mirror
         uses: s4u/maven-settings-action@v3.1.0
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
