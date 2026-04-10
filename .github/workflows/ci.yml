@@ -32,7 +32,7 @@ on:
       jdk-matrix:
         description: 'jdk matrix as json array'
         required: false
-        default: '[ "11", "17" ]'
+        default: '[ "21" ]'
         type: string
       jdk-distribution-matrix:
         description: "jdk distribution matrix"
@@ -62,7 +62,7 @@ on:
       ff-jdk:
         description: The jdk version used during fail-fast-build job
         required: false
-        default: '11'
+        default: '21'
         type: string
       ff-jdk-distribution:
         description: The jdk distribution used during fail-fast-build job

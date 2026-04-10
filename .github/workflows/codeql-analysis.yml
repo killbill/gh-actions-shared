@@ -24,7 +24,7 @@ on:
       jdk:
         description: The JDK used
         required: false
-        default: '11'
+        default: '21'
         type: string
       jdk-distribution:
         description: The JDK distribution used
