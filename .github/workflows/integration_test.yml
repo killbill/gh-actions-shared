@@ -96,7 +96,7 @@ jobs:
             database-password: "root"
             database-port: "3306"
             docker-compose-file: "docker-compose.ci.mysql.yml"
-            java-version: "11"
+            java-version: "21"
             java-distribution: "temurin"
             integration-test-profile: "integration-mysql"
           - database-adapter: "postgresql"
@@ -104,7 +104,7 @@ jobs:
             database-password: "postgres"
             database-port: "5432"
             docker-compose-file: "docker-compose.ci.postgresql.yml"
-            java-version: "11"
+            java-version: "21"
             java-distribution: "temurin"
             integration-test-profile: "integration-postgresql"
       max-parallel: ${{ inputs.max-parallel }}
@@ -114,17 +114,17 @@ jobs:
           echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("::add-mask::\(.value|tostring)")|.[]'
           echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ matrix.java-version }}
           distribution: ${{ matrix.java-distribution }}
           cache: 'maven'
       - name: Configure Sonatype mirror
-        uses: s4u/maven-settings-action@v3.1.0
+        uses: s4u/maven-settings-action@v4.0.0
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
         with:
           mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://repo.maven.apache.org/maven2"}]'
@@ -133,7 +133,7 @@ jobs:
           servers: '[{"id": "github","configuration": {"httpHeaders": {"property": {"name": "Authorization","value": "Bearer ${{ secrets.GITHUB_TOKEN }}"}}}}]'
       - name: Login to Docker Hub
         if: inputs.docker_login != 'false'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ env.DOCKERHUB_TOKEN }}
@@ -236,7 +236,7 @@ jobs:
           ./mvnw --errors --batch-mode --show-version -P${{ matrix.integration-test-profile }} ${{ inputs.maven_args_tests }} ${{ inputs.test-goal-java }}
       - name: Checkout killbill-integration-tests
         if: inputs.integration_tests_goal != ''
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: killbill/killbill-integration-tests
           ref: ${{ inputs.integration_tests_ref }}
@@ -287,7 +287,7 @@ jobs:
           docker stop it-db-1 || true
           echo "::endgroup::"
       - name: Upload logs on failure
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: failure-tomcat_logs-${{ matrix.database-adapter }}

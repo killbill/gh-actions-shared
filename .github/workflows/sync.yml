@@ -38,7 +38,7 @@ jobs:
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: true
@@ -51,13 +51,13 @@ jobs:
       - name: Merge source branch
         run: git merge origin/${{inputs.sourcebranch}}
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6.0.1
+        uses: peter-evans/create-pull-request@v8.1.0
         with:
           branch: ${{ inputs.branch }}-promotion
           title: Sync master into ${{ inputs.branch }}
           body: Merge latest master into ${{ inputs.branch }}
       - name: Upload artifact on failure
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: failure() && inputs.failure-upload-path != ''
         with:
           name: failure-${{ inputs.os }}-${{ inputs.jdk }}-${{ inputs.jdk-distribution }}
