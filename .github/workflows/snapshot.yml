@@ -67,9 +67,12 @@ jobs:
           java-version: ${{ inputs.jdk }}
           distribution: ${{ inputs.jdk-distribution }}
           cache: 'maven'
-          server-id: central
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
+      - name: Configure Maven settings
+        uses: s4u/maven-settings-action@v4.0.0
+        with:
+          sonatypeSnapshots: true
+          githubServer: false
+          servers: '[{"id": "central", "username": "${env.MAVEN_USERNAME}", "password": "${env.MAVEN_PASSWORD}"}]'
       - name: Set up Maven
         run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
       - name: Set new version
