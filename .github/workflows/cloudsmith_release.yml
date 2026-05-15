@@ -126,7 +126,7 @@ jobs:
         if: ${{ inputs.with_ruby == 'true' }}
         run: gem install bundler -v 2.6.9
       - name: Configure Sonatype mirror
-        uses: s4u/maven-settings-action@v3.1.0
+        uses: s4u/maven-settings-action@v4.0.0
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
         with:
           mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://oss.sonatype.org/content/repositories/releases"}]'
