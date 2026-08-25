@@ -120,7 +120,7 @@ jobs:
         if: ${{ inputs.with_ruby == 'true' }}
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 'jruby-9.4.2.0'
+          ruby-version: 'jruby-9.4.15.0'
           bundler-cache: false
       - name: Install Bundler 2.6.9
         if: ${{ inputs.with_ruby == 'true' }}
