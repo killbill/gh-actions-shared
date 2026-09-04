@@ -6,9 +6,11 @@ env:
 on:
   workflow_call:
     secrets:
-      MAVEN_USERNAME:
+      CLOUDSMITH_USERNAME:
         required: true
-      MAVEN_PASSWORD:
+      CLOUDSMITH_PASSWORD:
+        required: true
+      CLOUDSMITH_CENTRAL_PASSWORD:
         required: true
     inputs:
       maven_args:
@@ -19,7 +21,7 @@ on:
       maven_version:
         description: The Maven version used for builds
         required: false
-        default: '3.8.4'
+        default: '3.9.16'
         type: string
       os:
         description: The OS used
@@ -67,12 +69,16 @@ jobs:
           java-version: ${{ inputs.jdk }}
           distribution: ${{ inputs.jdk-distribution }}
           cache: 'maven'
-      - name: Configure Maven settings
+      - name: Configure Cloudsmith credentials
         uses: s4u/maven-settings-action@v4.0.0
         with:
           sonatypeSnapshots: true
           githubServer: false
-          servers: '[{"id": "central", "username": "${env.MAVEN_USERNAME}", "password": "${env.MAVEN_PASSWORD}"}]'
+          servers: |
+            [
+              {"id": "central", "username": "${{ secrets.CLOUDSMITH_USERNAME }}", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}"},
+              {"id": "cloudsmith", "username": "${{ secrets.CLOUDSMITH_USERNAME }}", "password": "${{ secrets.CLOUDSMITH_PASSWORD }}"}
+            ]
       - name: Set up Maven
         run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
       - name: Set new version
@@ -84,9 +90,6 @@ jobs:
           ./mvnw versions:set -DnewVersion=${snapshot_version}
           echo "::notice ::Version is ${snapshot_version}"
       - name: Deploy artifacts
-        env:
-          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
         run: ./mvnw --errors --batch-mode --show-version ${{ inputs.maven_args }} ${{ inputs.goal }}
       - name: Upload artifact on failure
         uses: actions/upload-artifact@v7
