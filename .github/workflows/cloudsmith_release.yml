@@ -88,6 +88,11 @@ on:
         required: false
         default: 'false'
         type: string
+      ruby_version:
+        description: The Ruby (or JRuby) version used when with_ruby is true
+        required: false
+        default: 'jruby-10.0.6.0'
+        type: string
       target_file:
         description: Target file name
         required: false
@@ -120,11 +125,11 @@ jobs:
         if: ${{ inputs.with_ruby == 'true' }}
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 'jruby-9.4.15.0'
+          ruby-version: ${{ inputs.ruby_version }}
           bundler-cache: false
-      - name: Install Bundler 2.6.9
+      - name: Install Bundler 2.7.2
         if: ${{ inputs.with_ruby == 'true' }}
-        run: gem install bundler -v 2.6.9
+        run: gem install bundler -v 2.7.2
       - name: Configure Sonatype mirror
         uses: s4u/maven-settings-action@v3.1.0
         # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
