@@ -72,12 +72,42 @@ jobs:
       - name: Configure Cloudsmith credentials
         uses: s4u/maven-settings-action@v4.0.0
         with:
-          sonatypeSnapshots: true
           githubServer: false
+          # This will cause generated settings.xml will have:
+          # - Profile with auto-generated ID
+          # - Make the profile enable by default
+          # - Add `<repositories>` and `<pluginRepositories>` under the profile
+          #
+          # At the time of writing, the "username" actually not needed for downloading artifact from Cloudsmith.
+          # Because of this, the "central" only need password. The "username" attribute set because it is required by
+          # maven-settings-action.
+          #
+          # The "cloudsmith" need to be declared here, and will be used by actual `pom.xml`'s <distributionManagement/>
           servers: |
             [
-              {"id": "central", "username": "${{ secrets.CLOUDSMITH_USERNAME }}", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}"},
+              {"id": "central", "username": "-", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}"},
               {"id": "cloudsmith", "username": "${{ secrets.CLOUDSMITH_USERNAME }}", "password": "${{ secrets.CLOUDSMITH_PASSWORD }}"}
+            ]
+          # As mentioned above, only `<distributionManagement />` needs "cloudsmith".
+          repositories: |
+            [
+              {
+                "id": "central", 
+                "name": "Central repository at Cloudsmith",
+                "url": "https://dl.cloudsmith.io/basic/killbill/oss/maven/",
+                "releases": { "enabled": "true", "updatePolicy": "always" },
+                "snapshots": { "enabled": "true", "updatePolicy": "always" }
+              }
+            ]
+          pluginRepositories: |
+            [
+              {
+                "id": "central", 
+                "name": "Central repository at Cloudsmith",
+                "url": "https://dl.cloudsmith.io/basic/killbill/oss/maven/",
+                "releases": { "enabled": "true", "updatePolicy": "always" },
+                "snapshots": { "enabled": "true", "updatePolicy": "always" }
+              }
             ]
       - name: Set up Maven
         run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
@@ -85,7 +115,6 @@ jobs:
         run: |
           current_version_with_snapshot=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
           current_version_without_snapshot=${current_version_with_snapshot%SNAPSHOT*}
-          # Need a -SNAPSHOT suffix for Sonatype
           snapshot_version="${current_version_without_snapshot}$(git rev-parse --short "$GITHUB_SHA")-SNAPSHOT"
           ./mvnw versions:set -DnewVersion=${snapshot_version}
           echo "::notice ::Version is ${snapshot_version}"
