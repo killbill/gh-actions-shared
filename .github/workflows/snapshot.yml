@@ -6,9 +6,13 @@ env:
 on:
   workflow_call:
     secrets:
-      MAVEN_USERNAME:
+      CLOUDSMITH_CENTRAL_PASSWORD:
         required: true
-      MAVEN_PASSWORD:
+      CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD:
+        required: true
+      CLOUDSMITH_DISTRIBUTION_MAN_USERNAME:
+        required: true
+      CLOUDSMITH_DISTRIBUTION_MAN_PASSWORD:
         required: true
     inputs:
       maven_args:
@@ -19,7 +23,7 @@ on:
       maven_version:
         description: The Maven version used for builds
         required: false
-        default: '3.8.4'
+        default: '3.9.16'
         type: string
       os:
         description: The OS used
@@ -67,26 +71,65 @@ jobs:
           java-version: ${{ inputs.jdk }}
           distribution: ${{ inputs.jdk-distribution }}
           cache: 'maven'
-      - name: Configure Maven settings
+      - name: Configure Various Cloudsmith credentials
         uses: s4u/maven-settings-action@v4.0.0
         with:
-          sonatypeSnapshots: true
           githubServer: false
-          servers: '[{"id": "central", "username": "${env.MAVEN_USERNAME}", "password": "${env.MAVEN_PASSWORD}"}]'
+          # This will cause generated settings.xml will have:
+          # - Profile with auto-generated ID
+          # - Make the profile enable by default
+          # - Add `<repositories>` and `<pluginRepositories>` under the profile
+          #
+          # At the time of writing, the "username" actually not needed for downloading artifact from Cloudsmith.
+          # Because of this, the "central" only need password. The "username" attribute set because it is required by
+          # maven-settings-action.
+          #
+          # The "cloudsmith-distribution-man" need to be declared here, and only will be used by actual `pom.xml`'s
+          # <distributionManagement/> later during deploying/uploading artifact.
+          servers: |
+            [
+              {"id": "central", "username": "-", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}"},
+              {"id": "killbill-maven-repository", "username": "-", "password": "${{ secrets.CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD }}"},
+              {"id": "cloudsmith", "username": "${{ secrets.CLOUDSMITH_DISTRIBUTION_MAN_USERNAME }}", "password": "${{ secrets.CLOUDSMITH_DISTRIBUTION_MAN_PASSWORD }}"}
+            ]
+          # As mentioned above, only `<distributionManagement />` needs "cloudsmith-distribution-man".
+          repositories: |
+            [
+              {
+                "id": "central", 
+                "name": "Proxied Maven Central OSS repository at Cloudsmith",
+                "url": "https://dl.cloudsmith.io/basic/killbill/oss/maven/",
+                "releases": { "enabled": "true", "updatePolicy": "always" },
+                "snapshots": { "enabled": "true", "updatePolicy": "always" }
+              },
+              {
+                "id": "killbill-maven-repository", 
+                "name": "Proxy for most Kill Bill artifacts at Cloudsmith",
+                "url": "https://dl.cloudsmith.io/basic/killbill/killbill-maven-repository/maven/",
+                "releases": { "enabled": "true", "updatePolicy": "always" },
+                "snapshots": { "enabled": "true", "updatePolicy": "always" }
+              }
+            ]
+          pluginRepositories: |
+            [
+              {
+                "id": "central", 
+                "name": "Proxy of Central OSS repository at Cloudsmith",
+                "url": "https://dl.cloudsmith.io/basic/killbill/oss/maven/",
+                "releases": { "enabled": "true", "updatePolicy": "always" },
+                "snapshots": { "enabled": "true", "updatePolicy": "always" }
+              }
+            ]
       - name: Set up Maven
         run: mvn --errors --batch-mode --show-version wrapper:wrapper "-Dmaven=${{ inputs.maven_version }}"
       - name: Set new version
         run: |
           current_version_with_snapshot=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
           current_version_without_snapshot=${current_version_with_snapshot%SNAPSHOT*}
-          # Need a -SNAPSHOT suffix for Sonatype
           snapshot_version="${current_version_without_snapshot}$(git rev-parse --short "$GITHUB_SHA")-SNAPSHOT"
           ./mvnw versions:set -DnewVersion=${snapshot_version}
           echo "::notice ::Version is ${snapshot_version}"
       - name: Deploy artifacts
-        env:
-          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
         run: ./mvnw --errors --batch-mode --show-version ${{ inputs.maven_args }} ${{ inputs.goal }}
       - name: Upload artifact on failure
         uses: actions/upload-artifact@v7
