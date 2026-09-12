@@ -6,11 +6,13 @@ env:
 on:
   workflow_call:
     secrets:
-      CLOUDSMITH_USERNAME:
-        required: true
-      CLOUDSMITH_PASSWORD:
-        required: true
       CLOUDSMITH_CENTRAL_PASSWORD:
+        required: true
+      CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD:
+        required: true
+      CLOUDSMITH_DISTRIBUTION_MAN_USERNAME:
+        required: true
+      CLOUDSMITH_DISTRIBUTION_MAN_PASSWORD:
         required: true
     inputs:
       maven_args:
@@ -69,32 +71,40 @@ jobs:
           java-version: ${{ inputs.jdk }}
           distribution: ${{ inputs.jdk-distribution }}
           cache: 'maven'
-      - name: Configure Cloudsmith credentials
+      - name: Configure Maven settings.xml profiles, repositories and pluginRepositories
         uses: s4u/maven-settings-action@v4.0.0
         with:
           githubServer: false
-          # This will cause generated settings.xml will have:
-          # - Profile with auto-generated ID
-          # - Make the profile enable by default
-          # - Add `<repositories>` and `<pluginRepositories>` under the profile
+          # This will generate settings.xml with:
+          # - Profile with auto-generated ID (doesn't matter because this ID never referenced by others)
+          # - Make the profile enable by default (`<activeByDefault>true</activeByDefault>`)
           #
-          # At the time of writing, the "username" actually not needed for downloading artifact from Cloudsmith.
-          # Because of this, the "central" only need password. The "username" attribute set because it is required by
-          # maven-settings-action.
+          # (At the time of writing) The "username" actually not required for downloading artifact from Cloudsmith.
+          # The only reason why "username" set as "-" because it is required by s4u/maven-settings-action.
           #
-          # The "cloudsmith" need to be declared here, and will be used by actual `pom.xml`'s <distributionManagement/>
+          # The "cloudsmith" need to be declared here, and will be referenced by <distributionManagement/> during
+          # deploying/uploading artifact to get the username and password.
           servers: |
             [
               {"id": "central", "username": "-", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}"},
-              {"id": "cloudsmith", "username": "${{ secrets.CLOUDSMITH_USERNAME }}", "password": "${{ secrets.CLOUDSMITH_PASSWORD }}"}
+              {"id": "killbill-maven-repository", "username": "-", "password": "${{ secrets.CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD }}"},
+              {"id": "cloudsmith", "username": "${{ secrets.CLOUDSMITH_DISTRIBUTION_MAN_USERNAME }}", "password": "${{ secrets.CLOUDSMITH_DISTRIBUTION_MAN_PASSWORD }}"}
             ]
-          # As mentioned above, only `<distributionManagement />` needs "cloudsmith".
+          # As mentioned above, only `<distributionManagement />` needs "cloudsmith", so in repositories and
+          # pluginRepositories, we're not declaring `"id": "cloudsmith"`.
           repositories: |
             [
               {
                 "id": "central", 
-                "name": "Central repository at Cloudsmith",
+                "name": "Proxied Maven Central OSS repository at Cloudsmith",
                 "url": "https://dl.cloudsmith.io/basic/killbill/oss/maven/",
+                "releases": { "enabled": "true", "updatePolicy": "always" },
+                "snapshots": { "enabled": "true", "updatePolicy": "always" }
+              },
+              {
+                "id": "killbill-maven-repository", 
+                "name": "Proxy for most Kill Bill artifacts at Cloudsmith",
+                "url": "https://dl.cloudsmith.io/basic/killbill/killbill-maven-repository/maven/",
                 "releases": { "enabled": "true", "updatePolicy": "always" },
                 "snapshots": { "enabled": "true", "updatePolicy": "always" }
               }
@@ -103,8 +113,15 @@ jobs:
             [
               {
                 "id": "central", 
-                "name": "Central repository at Cloudsmith",
+                "name": "Proxy of Central OSS repository at Cloudsmith",
                 "url": "https://dl.cloudsmith.io/basic/killbill/oss/maven/",
+                "releases": { "enabled": "true", "updatePolicy": "always" },
+                "snapshots": { "enabled": "true", "updatePolicy": "always" }
+              },
+              {
+                "id": "killbill-maven-repository", 
+                "name": "Proxy for most Kill Bill artifacts at Cloudsmith",
+                "url": "https://dl.cloudsmith.io/basic/killbill/killbill-maven-repository/maven/",
                 "releases": { "enabled": "true", "updatePolicy": "always" },
                 "snapshots": { "enabled": "true", "updatePolicy": "always" }
               }
