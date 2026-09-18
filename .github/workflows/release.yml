@@ -1,0 +1,239 @@
+name: release
+
+# DRAFT — not wired up to any caller repo yet. Modeled after the existing
+# per-repo release.yml files in killbill-api, killbill-commons, killbill-platform,
+# killbill-analytics-plugin, killbill-email-notifications-plugin, killbill-braintree
+# and killbill-stripe-plugin (all near-identical maven-release-plugin flows).
+#
+# killbill-oss-parent is intentionally NOT covered by this workflow: its release.yml
+# updates multiple downstream version properties (commons/base-plugin/platform/client)
+# in a single job and already uses a different (Cloudsmith) credentials/profile setup,
+# so folding it into this reusable workflow would require unrelated, higher-risk changes.
+
+env:
+  MAVEN_OPTS: "-Xmx2G -XX:+ExitOnOutOfMemoryError -Dmaven.wagon.rto=60000 -Dmaven.wagon.httpconnectionManager.ttlSeconds=25 -Dmaven.wagon.http.retryHandler.count=3"
+
+on:
+  workflow_call:
+    secrets:
+      BUILD_USER:
+        required: true
+      BUILD_TOKEN:
+        required: true
+      CLOUDSMITH_CENTRAL_PASSWORD:
+        required: true
+      CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD:
+        required: true
+      CLOUDSMITH_DISTRIBUTION_MAN_USERNAME:
+        required: true
+      CLOUDSMITH_DISTRIBUTION_MAN_PASSWORD:
+        required: true
+      GPG_SIGNING_KEY:
+        required: true
+      GPG_PASSPHRASE:
+        required: true
+      GH_WORKFLOW_PAT:
+        # Only required when release_oss_parent is used by the caller.
+        required: false
+      extra-env:
+        # Same convention as ci.yml: a JSON object of extra env vars/secrets
+        # (e.g. plugin-specific credentials like Braintree/Stripe keys) that
+        # should be exported for the whole job.
+        required: false
+    inputs:
+      maven_flags:
+        description: The flags to pass to all Maven commands
+        required: false
+        default: '-B --no-transfer-progress'
+        type: string
+      java_version:
+        description: The JDK version used for the release
+        required: false
+        default: '21'
+        type: string
+      java_distribution:
+        description: The JDK distribution used for the release
+        required: false
+        default: 'temurin'
+        type: string
+      os:
+        description: The OS used
+        required: false
+        default: 'ubuntu-latest'
+        type: string
+      release_profile:
+        description: The Maven profile activated for the release build (e.g. sonatype-oss-release)
+        required: false
+        default: 'sonatype-oss-release'
+        type: string
+      parent_version:
+        description: 'New killbill-oss-parent version (empty to skip the update)'
+        required: false
+        default: ''
+        type: string
+      perform_version:
+        description: 'Tag to (re-)perform (in case of a previous release:perform failure); empty for a normal release'
+        required: false
+        default: ''
+        type: string
+      release_oss_parent:
+        description: 'Whether to trigger a killbill-oss-parent release via repository-dispatch after this release succeeds'
+        required: false
+        default: false
+        type: boolean
+      oss_parent_dispatch_property:
+        description: >
+          Name of the killbill-oss-parent workflow_dispatch input to set with this
+          project's newly released version (e.g. "commons_version", "platform_version").
+          Required when release_oss_parent is true.
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  release:
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: Set environment variables
+        run: |
+          echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("::add-mask::\(.value|tostring)")|.[]'
+          echo '${{ secrets.extra-env }}' | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
+      - name: Checkout code
+        if: inputs.perform_version == ''
+        uses: actions/checkout@v6
+      - name: Checkout full repository
+        # Required when performing an existing release.
+        if: inputs.perform_version != ''
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: '0'
+      - name: Setup git user
+        env:
+          BUILD_USER: ${{ secrets.BUILD_USER }}
+          BUILD_TOKEN: ${{ secrets.BUILD_TOKEN }}
+        run: |
+          git config --global user.email "contact@killbill.io"
+          git config --global user.name "Kill Bill core team"
+          git config --global url."https://${BUILD_USER}:${BUILD_TOKEN}@github.com/".insteadOf "git@github.com:"
+      - name: Configure Java
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ inputs.java_version }}
+          distribution: ${{ inputs.java_distribution }}
+      - name: Configure Maven settings.xml profiles, repositories and pluginRepositories
+        uses: s4u/maven-settings-action@v4.0.0
+        with:
+          githubServer: false
+          # This will generate settings.xml with:
+          # - Profile with auto-generated ID (doesn't matter because this ID never referenced by others)
+          # - Make the profile enable by default (`<activeByDefault>true</activeByDefault>`)
+          #
+          # (At the time of writing) The "username" actually not required for downloading artifact from Cloudsmith.
+          # The only reason why "username" set as "-" because it is required by s4u/maven-settings-action.
+          #
+          # The "cloudsmith" need to be declared here, and will be referenced by <distributionManagement/> during
+          # deploying/uploading artifact to get the username and password.
+          #
+          # id=gpg.passphrase lets maven-gpg-plugin sign non-interactively; ${env.GPG_PASSPHRASE} is Maven's
+          # own settings.xml syntax (resolved by mvn from the env var at build time), not GitHub Actions
+          # interpolation, so the real passphrase is never written to disk here.
+          # `configuration: {}` is a hack for maven-settings-action validation (it requires id + (username or configuration)).
+          servers: |
+            [
+              {"id": "central", "username": "-", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}"},
+              {"id": "killbill-maven-repository", "username": "-", "password": "${{ secrets.CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD }}"},
+              {"id": "cloudsmith", "username": "${{ secrets.CLOUDSMITH_DISTRIBUTION_MAN_USERNAME }}", "password": "${{ secrets.CLOUDSMITH_DISTRIBUTION_MAN_PASSWORD }}"},
+              {"id": "gpg.passphrase", "passphrase": "${env.GPG_PASSPHRASE}", "configuration": {}}
+            ]
+          # As mentioned above, only `<distributionManagement />` needs "cloudsmith", so in repositories and
+          # pluginRepositories, we're not declaring `"id": "cloudsmith"`.
+          repositories: |
+            [
+              {
+                "id": "central", 
+                "name": "Proxied Maven Central OSS repository at Cloudsmith",
+                "url": "https://dl.cloudsmith.io/basic/killbill/oss/maven/",
+                "releases": { "enabled": "true", "updatePolicy": "always" },
+                "snapshots": { "enabled": "true", "updatePolicy": "always" }
+              },
+              {
+                "id": "killbill-maven-repository", 
+                "name": "Proxy for most Kill Bill artifacts at Cloudsmith",
+                "url": "https://dl.cloudsmith.io/basic/killbill/killbill-maven-repository/maven/",
+                "releases": { "enabled": "true", "updatePolicy": "always" },
+                "snapshots": { "enabled": "true", "updatePolicy": "always" }
+              }
+            ]
+          pluginRepositories: |
+            [
+              {
+                "id": "central", 
+                "name": "Proxy of Central OSS repository at Cloudsmith",
+                "url": "https://dl.cloudsmith.io/basic/killbill/oss/maven/",
+                "releases": { "enabled": "true", "updatePolicy": "always" },
+                "snapshots": { "enabled": "true", "updatePolicy": "always" }
+              },
+              {
+                "id": "killbill-maven-repository", 
+                "name": "Proxy for most Kill Bill artifacts at Cloudsmith",
+                "url": "https://dl.cloudsmith.io/basic/killbill/killbill-maven-repository/maven/",
+                "releases": { "enabled": "true", "updatePolicy": "always" },
+                "snapshots": { "enabled": "true", "updatePolicy": "always" }
+              }
+            ]
+      - name: Download Java dependencies
+        # We do as much as we can, but it may not be enough (https://issues.apache.org/jira/browse/MDEP-82)
+        run: |
+          mvn ${{ inputs.maven_flags }} clean install dependency:resolve dependency:resolve-plugins -DskipTests=true -Dgpg.skip=true -P${{ inputs.release_profile }}
+      - name: Update killbill-oss-parent
+        if: inputs.parent_version != ''
+        run: |
+          echo "Updating killbill-oss-parent pom.xml to ${{ inputs.parent_version }}:"
+          mvn ${{ inputs.maven_flags }} versions:update-parent -DgenerateBackupPoms=false -DparentVersion="[${{ inputs.parent_version }}]"
+          echo "killbill-oss-parent pom.xml changes:"
+          git --no-pager diff
+          echo "Downloading new dependencies:"
+          mvn ${{ inputs.maven_flags }} -U clean install -DskipTests=true
+
+          git add pom.xml
+          # Will be pushed as part of the release process, only if the release is successful
+          git commit -m "pom.xml: update killbill-oss-parent to ${{ inputs.parent_version }}"
+      - name: Import GPG signing key
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ inputs.java_version }}
+          distribution: ${{ inputs.java_distribution }}
+          # Required: setup-java always (re)writes ~/.m2/settings.xml unconditionally, even when
+          # server-id/username/password/gpg-passphrase inputs are omitted. Without this, it would
+          # overwrite the multi-server settings.xml from "Configure Maven settings.xml profiles,
+          # repositories and pluginRepositories" above.
+          overwrite-settings: false
+          gpg-private-key: ${{ secrets.GPG_SIGNING_KEY }}
+      - name: Release artifacts
+        if: inputs.perform_version == ''
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        # It will still check the remote but hopefully not download much (0 B at 0 B/s). -o isn't safe because of MDEP-82 (see above).
+        run: |
+          mvn ${{ inputs.maven_flags }} release:clean release:prepare release:perform
+      - name: Perform release
+        if: inputs.perform_version != ''
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        # It will still check the remote but hopefully not download much (0 B at 0 B/s). -o isn't safe because of MDEP-82 (see above).
+        # See https://issues.apache.org/jira/browse/SCM-729 for why the release.properties file is required.
+        run: |
+          echo "scm.url=scm\:git\:git@github.com\:${GITHUB_REPOSITORY}.git" > release.properties
+          echo "scm.tag=${{ inputs.perform_version }}" >> release.properties
+          mvn ${{ inputs.maven_flags }} release:perform
+      - name: Send Repository Dispatch Event
+        if: inputs.release_oss_parent == true
+        env:
+          GH_TOKEN: ${{ secrets.GH_WORKFLOW_PAT }}
+        run: |
+          if [ -z "${{ inputs.oss_parent_dispatch_property }}" ]; then
+            echo "::error ::release_oss_parent is true but oss_parent_dispatch_property was not set"
+            exit 1
+          fi
+          PROJECT_VERSION=$(git describe --abbrev=0 | cut -d '-' -f 3)
+          gh workflow -R killbill/killbill-oss-parent run release.yml -f ${{ inputs.oss_parent_dispatch_property }}=${PROJECT_VERSION}
