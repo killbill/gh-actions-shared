@@ -12,6 +12,10 @@ on:
     secrets:
       extra-env:
         required: false
+      CLOUDSMITH_CENTRAL_PASSWORD:
+        required: true
+      CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD:
+        required: true
     inputs:
       integration_tests_goal:
         description: integration-tests goal
@@ -123,14 +127,51 @@ jobs:
           java-version: ${{ matrix.java-version }}
           distribution: ${{ matrix.java-distribution }}
           cache: 'maven'
-      - name: Configure Sonatype mirror
+      - name: Configure Cloudsmith credentials
         uses: s4u/maven-settings-action@v4.0.0
-        # Go to Sonatype directly to avoid delay syncs (could get rid of this if actions/setup-java were to support mirrors).
         with:
-          mirrors: '[{"id": "oss-releases", "name": "Sonatype releases", "mirrorOf": "central", "url": "https://repo.maven.apache.org/maven2"}]'
-          sonatypeSnapshots: true
+          # integration_test workflow doesn't need "cloudsmith".
           githubServer: false
-          servers: '[{"id": "github","configuration": {"httpHeaders": {"property": {"name": "Authorization","value": "Bearer ${{ secrets.GITHUB_TOKEN }}"}}}}]'
+          servers: |
+            [
+              {"id": "central", "username": "-", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}"},
+              {"id": "killbill-maven-repository", "username": "-", "password": "${{ secrets.CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD }}"},
+              {"id": "github","configuration": {"httpHeaders": {"property": {"name": "Authorization","value": "Bearer ${{ secrets.GITHUB_TOKEN }}"}}}}
+            ]
+          repositories: |
+            [
+              {
+                "id": "central", 
+                "name": "Proxied Maven Central OSS repository at Cloudsmith",
+                "url": "https://dl.cloudsmith.io/basic/killbill/oss/maven/",
+                "releases": { "enabled": "true", "updatePolicy": "always" },
+                "snapshots": { "enabled": "true", "updatePolicy": "always" }
+              },
+              {
+                "id": "killbill-maven-repository", 
+                "name": "Proxy for most Kill Bill artifacts at Cloudsmith",
+                "url": "https://dl.cloudsmith.io/basic/killbill/killbill-maven-repository/maven/",
+                "releases": { "enabled": "true", "updatePolicy": "always" },
+                "snapshots": { "enabled": "true", "updatePolicy": "always" }
+              }
+            ]
+          pluginRepositories: |
+            [
+              {
+                "id": "central", 
+                "name": "Proxy of Central OSS repository at Cloudsmith",
+                "url": "https://dl.cloudsmith.io/basic/killbill/oss/maven/",
+                "releases": { "enabled": "true", "updatePolicy": "always" },
+                "snapshots": { "enabled": "true", "updatePolicy": "always" }
+              },
+              {
+                "id": "killbill-maven-repository", 
+                "name": "Proxy for most Kill Bill artifacts at Cloudsmith",
+                "url": "https://dl.cloudsmith.io/basic/killbill/killbill-maven-repository/maven/",
+                "releases": { "enabled": "true", "updatePolicy": "always" },
+                "snapshots": { "enabled": "true", "updatePolicy": "always" }
+              }
+            ]
       - name: Login to Docker Hub
         if: inputs.docker_login != 'false'
         uses: docker/login-action@v4
