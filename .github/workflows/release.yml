@@ -79,8 +79,8 @@ on:
       release_oss_parent:
         description: 'Whether to trigger a killbill-oss-parent release via repository-dispatch after this release succeeds'
         required: false
-        default: false
-        type: boolean
+        default: 'false'
+        type: string
       oss_parent_dispatch_property:
         description: >
           Name of the killbill-oss-parent workflow_dispatch input to set with this
@@ -227,7 +227,7 @@ jobs:
           echo "scm.tag=${{ inputs.perform_version }}" >> release.properties
           mvn ${{ inputs.maven_flags }} release:perform
       - name: Send Repository Dispatch Event
-        if: inputs.release_oss_parent == true
+        if: inputs.release_oss_parent == 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_WORKFLOW_PAT }}
         run: |
