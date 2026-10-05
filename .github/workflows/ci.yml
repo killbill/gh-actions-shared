@@ -118,6 +118,11 @@ on:
         required: false
         default: 7
         type: number
+      purge-cache:
+        description: Purge the existing Maven dependency cache (for this branch/ref) before restoring it
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   # verify build on one node - before matrix will start
@@ -127,6 +132,9 @@ jobs:
     timeout-minutes: ${{ inputs.ff-timeout-minutes }}
     # execute on any push or pull request from forked repo
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Set environment variables
         run: |
@@ -141,8 +149,22 @@ jobs:
         with:
           java-version: ${{ inputs.ff-jdk }}
           distribution: ${{ inputs.ff-jdk-distribution }}
-          cache: 'maven'
           show-download-progress: true
+      - name: Purge Maven dependency cache
+        if: inputs.purge-cache
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh cache list --key maven- --ref "${{ github.ref }}" --limit 100 --json id --jq '.[].id' \
+            | xargs -r -n1 gh cache delete
+      - name: Cache Maven repository
+        uses: actions/cache@v5
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml', '**/.mvn/extensions.xml', '**/.mvn/wrapper/maven-wrapper.properties') }}
+          restore-keys: |
+            maven-${{ runner.os }}-
       - name: Configure Cloudsmith credentials
         uses: s4u/maven-settings-action@v4.0.0
         with:
@@ -213,6 +235,9 @@ jobs:
         exclude: ${{ fromJSON( inputs.matrix-exclude ) }}
         profile: ${{ fromJSON( inputs.test-profile-matrix ) }}
       max-parallel: ${{ inputs.max-parallel }}
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Should run
         id: should-run
@@ -238,8 +263,23 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: ${{ matrix.distribution }}
-          cache: 'maven'
           show-download-progress: true
+      - name: Purge Maven dependency cache
+        if: steps.should-run.conclusion == 'success' && inputs.purge-cache
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh cache list --key maven- --ref "${{ github.ref }}" --limit 100 --json id --jq '.[].id' \
+            | xargs -r -n1 gh cache delete
+      - name: Cache Maven repository
+        if: steps.should-run.conclusion == 'success'
+        uses: actions/cache@v5
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml', '**/.mvn/extensions.xml', '**/.mvn/wrapper/maven-wrapper.properties') }}
+          restore-keys: |
+            maven-${{ runner.os }}-
       - name: Configure Cloudsmith credentials
         if: steps.should-run.conclusion == 'success'
         uses: s4u/maven-settings-action@v4.0.0
@@ -304,6 +344,9 @@ jobs:
     name: verify
     runs-on: ${{ inputs.ff-os }}
     timeout-minutes: ${{ inputs.ff-timeout-minutes }}
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Set environment variables
         run: |
@@ -318,8 +361,22 @@ jobs:
         with:
           java-version: ${{ inputs.ff-jdk }}
           distribution: ${{ inputs.ff-jdk-distribution }}
-          cache: 'maven'
           show-download-progress: true
+      - name: Purge Maven dependency cache
+        if: inputs.purge-cache
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh cache list --key maven- --ref "${{ github.ref }}" --limit 100 --json id --jq '.[].id' \
+            | xargs -r -n1 gh cache delete
+      - name: Cache Maven repository
+        uses: actions/cache@v5
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml', '**/.mvn/extensions.xml', '**/.mvn/wrapper/maven-wrapper.properties') }}
+          restore-keys: |
+            maven-${{ runner.os }}-
       - name: Configure Cloudsmith credentials
         uses: s4u/maven-settings-action@v4.0.0
         with:
