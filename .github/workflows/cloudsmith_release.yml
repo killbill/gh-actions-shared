@@ -99,8 +99,6 @@ on:
         type: string
 
 
-
-
 jobs:
   cloudsmith_release:
     runs-on: ${{ inputs.os }}
@@ -119,7 +117,6 @@ jobs:
         with:
           java-version: ${{ inputs.jdk }}
           distribution: ${{ inputs.jdk-distribution }}
-          cache: 'maven'
       - name: Configure Ruby
         if: ${{ inputs.with_ruby == 'true' }}
         uses: ruby/setup-ruby@v1

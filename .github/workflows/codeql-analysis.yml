@@ -50,6 +50,11 @@ on:
         description: A file, directory or wildcard pattern that describes what to upload on failure
         required: false
         type: string
+      purge-cache:
+        description: Purge the existing Maven dependency cache (for this branch/ref) before restoring it
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   analyze:
@@ -57,6 +62,8 @@ jobs:
     timeout-minutes: ${{ inputs.timeout-minutes }}
     permissions:
       security-events: write
+      contents: read
+      actions: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -67,7 +74,21 @@ jobs:
         with:
           java-version: ${{ inputs.jdk }}
           distribution: ${{ inputs.jdk-distribution }}
-          cache: 'maven'
+      - name: Purge Maven dependency cache
+        if: inputs.purge-cache
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh cache list --key maven- --ref "${{ github.ref }}" --limit 100 --json id --jq '.[].id' \
+            | xargs -r -n1 gh cache delete
+      - name: Cache Maven repository
+        uses: actions/cache@v5
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml', '**/.mvn/extensions.xml', '**/.mvn/wrapper/maven-wrapper.properties') }}
+          restore-keys: |
+            maven-${{ runner.os }}-
       - name: Configure Cloudsmith credentials
         uses: s4u/maven-settings-action@v4.0.0
         with:
