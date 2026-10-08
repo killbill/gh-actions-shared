@@ -128,9 +128,6 @@ jobs:
           # - Profile with auto-generated ID (doesn't matter because this ID never referenced by others)
           # - Make the profile enable by default (`<activeByDefault>true</activeByDefault>`)
           #
-          # (At the time of writing) The "username" actually not required for downloading artifact from Cloudsmith.
-          # The only reason why "username" set as "-" because it is required by s4u/maven-settings-action.
-          #
           # The "cloudsmith" need to be declared here, and will be referenced by <distributionManagement/> during
           # deploying/uploading artifact to get the username and password.
           #
