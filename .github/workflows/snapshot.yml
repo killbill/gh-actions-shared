@@ -105,8 +105,8 @@ jobs:
           # deploying/uploading artifact to get the username and password.
           servers: |
             [
-              {"id": "central", "username": "token", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}"},
-              {"id": "killbill-maven-repository", "username": "token", "password": "${{ secrets.CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD }}"},
+              {"id": "central", "username": "token", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}", "configuration": {"repositoryOrigins": {"origin": "https://dl.cloudsmith.io"}}},
+              {"id": "killbill-maven-repository", "username": "token", "password": "${{ secrets.CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD }}", "configuration": {"repositoryOrigins": {"origin": "https://dl.cloudsmith.io"}}},
               {"id": "cloudsmith", "username": "${{ secrets.CLOUDSMITH_DISTRIBUTION_MAN_USERNAME }}", "password": "${{ secrets.CLOUDSMITH_DISTRIBUTION_MAN_PASSWORD }}"}
             ]
           # As mentioned above, only `<distributionManagement />` needs "cloudsmith", so in repositories and
