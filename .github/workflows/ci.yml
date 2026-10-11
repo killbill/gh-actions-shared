@@ -26,7 +26,9 @@ on:
       maven_version:
         description: The Maven version used for builds
         required: false
-        default: '3.8.6'
+        # Pinned version needed. Otherwise, we will get surprised because GitHub Actions
+        # updates the runner's pre-installed Maven version periodically.
+        default: '3.10.0'
         type: string
       os-matrix:
         description: 'os matrix as json array'
@@ -129,6 +131,13 @@ jobs:
   fail-fast-build:
     name: jdk-${{ inputs.ff-jdk }} ${{ inputs.ff-profile }}
     runs-on: ${{ inputs.ff-os }}
+    env:
+      # Workaround until https://github.com/s4u/maven-settings-action/issues/464 is fixed:
+      # this action cannot emit Maven's native <repositoryOrigins> server field, so
+      # credentials configured for ids like "central"/"killbill-maven-repository" (reused
+      # to point at Cloudsmith) are silently dropped under Maven 3.10+'s stricter,
+      # origin-based credential scoping. Fall back to legacy id-only credential matching.
+      MAVEN_ARGS: -ntp -Dmaven.repository.credentialScope=id
     timeout-minutes: ${{ inputs.ff-timeout-minutes }}
     # execute on any push or pull request from forked repo
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event_name == 'pull_request'
@@ -172,8 +181,8 @@ jobs:
           githubServer: false
           servers: |
             [
-              {"id": "central", "username": "token", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}", "configuration": {"repositoryOrigins": {"origin": "https://dl.cloudsmith.io"}}},
-              {"id": "killbill-maven-repository", "username": "token", "password": "${{ secrets.CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD }}", "configuration": {"repositoryOrigins": {"origin": "https://dl.cloudsmith.io"}}},
+              {"id": "central", "username": "token", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}"},
+              {"id": "killbill-maven-repository", "username": "token", "password": "${{ secrets.CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD }}"},
               {"id": "github","configuration": {"httpHeaders": {"property": {"name": "Authorization","value": "Bearer ${{ secrets.GITHUB_TOKEN }}"}}}}
             ]
           repositories: |
@@ -226,6 +235,13 @@ jobs:
     name: jdk-${{ matrix.jdk }} ${{ matrix.profile }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     runs-on: ${{ matrix.os }}
+    env:
+      # Workaround until https://github.com/s4u/maven-settings-action/issues/464 is fixed:
+      # this action cannot emit Maven's native <repositoryOrigins> server field, so
+      # credentials configured for ids like "central"/"killbill-maven-repository" (reused
+      # to point at Cloudsmith) are silently dropped under Maven 3.10+'s stricter,
+      # origin-based credential scoping. Fall back to legacy id-only credential matching.
+      MAVEN_ARGS: -ntp -Dmaven.repository.credentialScope=id
     strategy:
       fail-fast: ${{ inputs.test-fail-fast }}
       matrix:
@@ -288,8 +304,8 @@ jobs:
           githubServer: false
           servers: |
             [
-              {"id": "central", "username": "token", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}", "configuration": {"repositoryOrigins": {"origin": "https://dl.cloudsmith.io"}}},
-              {"id": "killbill-maven-repository", "username": "token", "password": "${{ secrets.CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD }}", "configuration": {"repositoryOrigins": {"origin": "https://dl.cloudsmith.io"}}},
+              {"id": "central", "username": "token", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}"},
+              {"id": "killbill-maven-repository", "username": "token", "password": "${{ secrets.CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD }}"},
               {"id": "github","configuration": {"httpHeaders": {"property": {"name": "Authorization","value": "Bearer ${{ secrets.GITHUB_TOKEN }}"}}}}
             ]
           repositories: |
@@ -343,6 +359,13 @@ jobs:
     needs: fail-fast-build
     name: verify
     runs-on: ${{ inputs.ff-os }}
+    env:
+      # Workaround until https://github.com/s4u/maven-settings-action/issues/464 is fixed:
+      # this action cannot emit Maven's native <repositoryOrigins> server field, so
+      # credentials configured for ids like "central"/"killbill-maven-repository" (reused
+      # to point at Cloudsmith) are silently dropped under Maven 3.10+'s stricter,
+      # origin-based credential scoping. Fall back to legacy id-only credential matching.
+      MAVEN_ARGS: -ntp -Dmaven.repository.credentialScope=id
     timeout-minutes: ${{ inputs.ff-timeout-minutes }}
     permissions:
       contents: read
@@ -384,8 +407,8 @@ jobs:
           githubServer: false
           servers: |
             [
-              {"id": "central", "username": "token", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}", "configuration": {"repositoryOrigins": {"origin": "https://dl.cloudsmith.io"}}},
-              {"id": "killbill-maven-repository", "username": "token", "password": "${{ secrets.CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD }}", "configuration": {"repositoryOrigins": {"origin": "https://dl.cloudsmith.io"}}},
+              {"id": "central", "username": "token", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}"},
+              {"id": "killbill-maven-repository", "username": "token", "password": "${{ secrets.CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD }}"},
               {"id": "github","configuration": {"httpHeaders": {"property": {"name": "Authorization","value": "Bearer ${{ secrets.GITHUB_TOKEN }}"}}}}
             ]
           repositories: |
