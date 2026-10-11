@@ -56,6 +56,13 @@ on:
         required: false
         default: 'temurin'
         type: string
+      maven_version:
+        description: The Maven version used for the release
+        required: false
+        # Pinned version needed. Otherwise, we will get surprised because GitHub Actions
+        # updates the runner's pre-installed Maven version periodically.
+        default: '3.10.0'
+        type: string
       os:
         description: The OS used
         required: false
@@ -93,6 +100,13 @@ on:
 jobs:
   release:
     runs-on: ${{ inputs.os }}
+    env:
+      # Workaround until https://github.com/s4u/maven-settings-action/issues/464 is fixed:
+      # this action cannot emit Maven's native <repositoryOrigins> server field, so
+      # credentials configured for ids like "central"/"killbill-maven-repository" (reused
+      # to point at Cloudsmith) are silently dropped under Maven 3.10+'s stricter,
+      # origin-based credential scoping. Fall back to legacy id-only credential matching.
+      MAVEN_ARGS: -ntp -Dmaven.repository.credentialScope=id
     steps:
       - name: Set environment variables
         run: |
@@ -120,6 +134,16 @@ jobs:
         with:
           java-version: ${{ inputs.java_version }}
           distribution: ${{ inputs.java_distribution }}
+      - name: Pin Maven version
+        # This workflow calls "mvn" directly (no ./mvnw wrapper), so pin the version by
+        # installing it and putting it ahead of the runner's own Maven on PATH. Otherwise,
+        # we will get surprised because GitHub Actions updates the runner's pre-installed
+        # Maven version periodically.
+        run: |
+          MAVEN_VERSION="${{ inputs.maven_version }}"
+          curl -fsSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" -o "$RUNNER_TEMP/maven.tar.gz"
+          tar -xzf "$RUNNER_TEMP/maven.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
       - name: Configure Maven settings.xml profiles, repositories and pluginRepositories
         uses: s4u/maven-settings-action@v4.0.0
         with:
@@ -137,8 +161,8 @@ jobs:
           # `configuration: {}` is a hack for maven-settings-action validation (it requires id + (username or configuration)).
           servers: |
             [
-              {"id": "central", "username": "token", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}", "configuration": {"repositoryOrigins": {"origin": "https://dl.cloudsmith.io"}}},
-              {"id": "killbill-maven-repository", "username": "token", "password": "${{ secrets.CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD }}", "configuration": {"repositoryOrigins": {"origin": "https://dl.cloudsmith.io"}}},
+              {"id": "central", "username": "token", "password": "${{ secrets.CLOUDSMITH_CENTRAL_PASSWORD }}"},
+              {"id": "killbill-maven-repository", "username": "token", "password": "${{ secrets.CLOUDSMITH_KILLBILL_MAVEN_REPO_PASSWORD }}"},
               {"id": "cloudsmith", "username": "${{ secrets.CLOUDSMITH_DISTRIBUTION_MAN_USERNAME }}", "password": "${{ secrets.CLOUDSMITH_DISTRIBUTION_MAN_PASSWORD }}"},
               {"id": "gpg.passphrase", "passphrase": "${env.GPG_PASSPHRASE}", "configuration": {}}
             ]
